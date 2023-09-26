@@ -111,6 +111,7 @@ namespace TicketReservationSystemAPI.Services.AuthService
                 new Claim(ClaimTypes.Email, agent.Email),
                 new Claim(ClaimTypes.Role, UserRole.TravelAgent.ToString())
             };
+
             SymmetricSecurityKey key = new(System.Text.Encoding.UTF8.GetBytes(_configuration.GetSection("AppSettings:Token").Value));
 
             SigningCredentials creds = new(key, SecurityAlgorithms.HmacSha512Signature);

@@ -9,6 +9,8 @@ using TicketReservationSystemAPI.Services.TravelerService;
 
 var builder = WebApplication.CreateBuilder(args);
 
+//builder.Configuration.AddUserSecrets<Program>();
+
 builder.Services.Configure<DbSettings>(
     builder.Configuration.GetSection("MongoDbSettings"));
 
