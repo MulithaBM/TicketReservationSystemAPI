@@ -5,6 +5,10 @@ namespace TicketReservationSystemAPI.Services.TravelerService
 {
     public interface ITravelerService
     {
-        Task<ServiceResponse<Traveler>> GetProfile(string userId);
+        Task<ServiceResponse<int>> Register(TravelerRegistration traveler);
+        Task<ServiceResponse<string>> Login(TravelerLogin traveler);
+        Task<ServiceResponse<Traveler>> GetAccount(string userId);
+        Task<ServiceResponse<int>> UpdateAccount(string userId, TravelerUpdate traveler);
+        Task<ServiceResponse<int>> DeactivateAccount(string userId);
     }
 }

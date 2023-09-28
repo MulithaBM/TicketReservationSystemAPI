@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using TicketReservationSystemAPI.Models.Other;
-using TicketReservationSystemAPI.Services.AuthService;
+using TicketReservationSystemAPI.Services.AgentService;
 
 namespace TicketReservationSystemAPI.Controllers
 {
@@ -8,16 +8,16 @@ namespace TicketReservationSystemAPI.Controllers
     [Route("api/[controller]")]
     public class AgentController : ControllerBase
     {
-        private readonly IAgentAuthService _authService;
-        public AgentController(IAgentAuthService authService) 
+        private readonly IAgentService _agentService;
+        public AgentController(IAgentService authService) 
         {
-            _authService = authService;
+            _agentService = authService;
         }
 
         [HttpPost("login")]
         public async Task<ActionResult<ServiceResponse<string>>> Login([FromBody] AgentLogin data)
         {
-            ServiceResponse<string> response = await _authService.Login(data);
+            ServiceResponse<string> response = await _agentService.Login(data);
 
             if (!response.Success)
             {
@@ -30,7 +30,7 @@ namespace TicketReservationSystemAPI.Controllers
         [HttpPost("register")]
         public async Task<ActionResult<ServiceResponse<int>>> Register([FromBody] AgentRegistration data)
         {
-            ServiceResponse<int> response = await _authService.Register(data);
+            ServiceResponse<int> response = await _agentService.Register(data);
 
             if (!response.Success)
             {

@@ -4,25 +4,21 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Swashbuckle.AspNetCore.Filters;
 using TicketReservationSystemAPI.Data;
-using TicketReservationSystemAPI.Services.AuthService;
+using TicketReservationSystemAPI.Services.AgentService;
 using TicketReservationSystemAPI.Services.TravelerService;
 
 var builder = WebApplication.CreateBuilder(args);
 
-//builder.Configuration.AddUserSecrets<Program>();
+builder.Configuration.AddUserSecrets<Program>();
 
 builder.Services.Configure<DbSettings>(
     builder.Configuration.GetSection("MongoDbSettings"));
 
+builder.Configuration.GetSection("AppSettings").Get<JWTSettings>();
+
 builder.Services.AddSingleton(provider =>
 {
-    var options = provider.GetService<IOptions<DbSettings>>();
-
-    if (options == null)
-    {
-        throw new InvalidOperationException("MongoDbSettings is not configured properly");
-    }
-
+    var options = provider.GetService<IOptions<DbSettings>>() ?? throw new InvalidOperationException("MongoDbSettings is not configured properly");
     return new DataContext(options);
 });
 
@@ -47,10 +43,10 @@ builder.Services.AddSwaggerGen(
 
 builder.Services.AddAutoMapper(typeof(Program).Assembly);
 
-builder.Services.AddSingleton<ITravelerAuthService, TravelerAuthservice>();
-builder.Services.AddSingleton<IAgentAuthService, AgentAuthService>();
-
 builder.Services.AddSingleton<ITravelerService, TravelerService>();
+builder.Services.AddSingleton<IAgentService, AgentService>();
+
+string token = builder.Configuration["AppSettings:Token"] ?? throw new NullReferenceException("Missing token");
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 .AddJwtBearer(
@@ -61,7 +57,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidateIssuerSigningKey = true,
             IssuerSigningKey = new SymmetricSecurityKey(
                 System.Text.Encoding.UTF8
-                .GetBytes(builder.Configuration.GetSection("AppSettings:Token").Value)
+                .GetBytes(token)
             ),
             ValidateIssuer = false,
             ValidateAudience = false

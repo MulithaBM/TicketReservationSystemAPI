@@ -1,24 +1,22 @@
 ﻿using Microsoft.IdentityModel.Tokens;
-using MongoDB.Driver;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using TicketReservationSystemAPI.Data;
-using TicketReservationSystemAPI.Models;
 using TicketReservationSystemAPI.Models.enums;
 using TicketReservationSystemAPI.Models.Other;
+using TicketReservationSystemAPI.Models;
+using MongoDB.Driver;
 
-namespace TicketReservationSystemAPI.Services.AuthService
+namespace TicketReservationSystemAPI.Services.AgentService
 {
-    public class AgentAuthService : IAgentAuthService
+    public class AgentService : IAgentService
     {
         private readonly DataContext _context;
-        private readonly IConfiguration _configuration;
 
-        public AgentAuthService(DataContext context, IConfiguration configuration)
+        public AgentService(DataContext context)
         {
             _context = context;
-            _configuration = configuration;
         }
 
         public async Task<ServiceResponse<string>> Login(AgentLogin data)
@@ -79,6 +77,9 @@ namespace TicketReservationSystemAPI.Services.AuthService
             return response;
         }
 
+        // update profile (password included)
+
+
         public async Task<bool> UserExists(string email)
         {
             if (await _context.Agents.Find(x => x.Email.ToLower() == email.ToLower()).AnyAsync())
@@ -91,7 +92,7 @@ namespace TicketReservationSystemAPI.Services.AuthService
 
         private static void CreatePasswordHash(string password, out byte[] passwordHash, out byte[] passwordSalt)
         {
-            using var hmac = new System.Security.Cryptography.HMACSHA512();
+            using var hmac = new HMACSHA512();
             passwordSalt = hmac.Key;
             passwordHash = hmac.ComputeHash(System.Text.Encoding.UTF8.GetBytes(password));
         }
@@ -112,7 +113,7 @@ namespace TicketReservationSystemAPI.Services.AuthService
                 new Claim(ClaimTypes.Role, UserRole.TravelAgent.ToString())
             };
 
-            SymmetricSecurityKey key = new(System.Text.Encoding.UTF8.GetBytes(_configuration.GetSection("AppSettings:Token").Value));
+            SymmetricSecurityKey key = new(System.Text.Encoding.UTF8.GetBytes(JWTSettings.Token));
 
             SigningCredentials creds = new(key, SecurityAlgorithms.HmacSha512Signature);
 

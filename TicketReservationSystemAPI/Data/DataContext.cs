@@ -7,7 +7,6 @@ namespace TicketReservationSystemAPI.Data
     public class DataContext
     {
         private readonly IMongoDatabase _database;
-        //public DataContext(DbContextOptions<DataContext> options) : base(options) { }
 
         public DataContext(IOptions<DbSettings> options)
         {
