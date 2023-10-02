@@ -1,6 +1,5 @@
-﻿using MongoDB.Bson.Serialization.Attributes;
-using System.ComponentModel.DataAnnotations;
-using TicketReservationSystemAPI.Models.enums;
+﻿using MongoDB.Bson;
+using MongoDB.Bson.Serialization.Attributes;
 
 namespace TicketReservationSystemAPI.Models
 {
@@ -14,5 +13,6 @@ namespace TicketReservationSystemAPI.Models
         public byte[] PasswordHash { get; set; }
         public byte[] PasswordSalt { get; set; }
         public bool IsActive { get; set; }
+        public IEnumerable<ObjectId>? Reservations { get; set; }
     }
 }

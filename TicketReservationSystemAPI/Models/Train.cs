@@ -8,9 +8,10 @@ namespace TicketReservationSystemAPI.Models
         [BsonId]
         public ObjectId Id { get; set; }
         public string Name { get; set; }
-        public int Seats { get; set; }
-        public IEnumerable<ObjectId> ScheduleIds { get; set; }
-        public bool IsActive { get; set; }
-        public bool IsPublished { get; set; }
+        public string DepartureStation { get; set; }
+        public string ArrivalStation { get; set; }
+        public IEnumerable<ObjectId>? Schedules { get; set; }
+        public bool IsActive { get; set; } = true;
+        public bool IsPublished { get; set; } = false;
     }
 }

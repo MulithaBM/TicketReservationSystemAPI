@@ -11,7 +11,7 @@ namespace TicketReservationSystemAPI.Data
         public DataContext(IOptions<DbSettings> options)
         {
             var settings = options.Value;
-            var client = new MongoClient(settings.ConnectionURI);
+            var client = new MongoClient(settings.ConnectionString);
             _database = client.GetDatabase(settings.DatabaseName);
         }
 

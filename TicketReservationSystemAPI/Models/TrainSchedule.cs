@@ -7,10 +7,11 @@ namespace TicketReservationSystemAPI.Models
     {
         [BsonId]
         public ObjectId Id { get; set; }
-        public ObjectId TrainId { get; set; }
-        public DateTime DepartureTime { get; set; }
-        public DateTime ArrivalTime { get; set; }
+        public string TrainId { get; set; }
+        public DateOnly Date { get; set; }
+        public TimeOnly DepartureTime { get; set; }
+        public TimeOnly ArrivalTime { get; set; }
         public int AvailableSeats { get; set; }
-        public int Price { get; set; }
+        public decimal Price { get; set; }
     }
 }
