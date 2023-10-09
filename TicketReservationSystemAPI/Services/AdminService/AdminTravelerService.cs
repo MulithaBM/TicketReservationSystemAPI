@@ -1,9 +1,5 @@
-﻿using Microsoft.IdentityModel.Tokens;
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
-using System.Security.Cryptography;
+﻿using System.Security.Cryptography;
 using TicketReservationSystemAPI.Data;
-using TicketReservationSystemAPI.Models.enums;
 using TicketReservationSystemAPI.Models;
 using TicketReservationSystemAPI.Models.Other;
 using TicketReservationSystemAPI.Models.Other.Admin;
@@ -61,16 +57,31 @@ namespace TicketReservationSystemAPI.Services.AdminService
             return response;
         }
 
-        public async Task<ServiceResponse<List<AdminTravelerReturn>>> GetAccounts()
+        public async Task<ServiceResponse<List<AdminTravelerReturn>>> GetAccounts(bool? status = null)
         {
             ServiceResponse<List<AdminTravelerReturn>> response = new();
-            
-            List<Traveler> travelers = await _context.Travelers.Find(x => true).ToListAsync();
+
+            List<Traveler> travelers;
+
+            if (status == null)
+            {
+                travelers = await _context.Travelers.Find(x => true).ToListAsync();
+            }
+            else
+            {
+                travelers = await _context.Travelers.Find(x => x.IsActive == status).ToListAsync();
+            }
+
+            if (travelers.Count == 0)
+            {
+                response.Success = true;
+                response.Message = "No travelers found";
+
+                return response;
+            }
 
             response.Data = _mapper.Map<List<AdminTravelerReturn>>(travelers);
-
             response.Success = true;
-            response.Message = "Successfully retrieved";
 
             return response;
         }
