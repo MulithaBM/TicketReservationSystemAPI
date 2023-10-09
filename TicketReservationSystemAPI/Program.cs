@@ -4,6 +4,7 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Swashbuckle.AspNetCore.Filters;
 using TicketReservationSystemAPI.Data;
+using TicketReservationSystemAPI.Services.AdminService;
 using TicketReservationSystemAPI.Services.AgentService;
 using TicketReservationSystemAPI.Services.TravelerService;
 
@@ -43,8 +44,9 @@ builder.Services.AddSwaggerGen(
 
 builder.Services.AddAutoMapper(typeof(Program).Assembly);
 
-builder.Services.AddSingleton<ITravelerService, TravelerService>();
+builder.Services.AddSingleton<IAdminService, AdminService>();
 builder.Services.AddSingleton<IAgentService, AgentService>();
+builder.Services.AddSingleton<ITravelerService, TravelerService>();
 
 string token = builder.Configuration["AppSettings:Token"] ?? throw new NullReferenceException("Missing token");
 

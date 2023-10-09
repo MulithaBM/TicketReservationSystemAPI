@@ -21,6 +21,7 @@
   <ItemGroup>
     <Folder Include="DTOs\" />
     <Folder Include="Repositories\" />
+    <Folder Include="Services\ResevationService\" />
   </ItemGroup>
 
 </Project>

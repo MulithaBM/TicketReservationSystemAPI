@@ -3,15 +3,16 @@ using MongoDB.Bson;
 using MongoDB.Driver;
 using TicketReservationSystemAPI.Data;
 using TicketReservationSystemAPI.Models;
+using TicketReservationSystemAPI.Models.Enums;
 using TicketReservationSystemAPI.Models.Other;
 
 namespace TicketReservationSystemAPI.Services.TrainService
 {
-    public class TrainService : ITrainService
+    public class AdminTrainService : IAdminTrainService
     {
         private readonly DataContext _context;
 
-        public TrainService(DataContext context)
+        public AdminTrainService(DataContext context)
         {
             _context = context;
         }
@@ -25,6 +26,7 @@ namespace TicketReservationSystemAPI.Services.TrainService
                 Train train = new()
                 {
                     Name = data.Name,
+                    Type = (TrainType)data.Type,
                     DepartureStation = data.DepartureStation,
                     ArrivalStation = data.ArrivalStation
                 };
