@@ -8,9 +8,9 @@ namespace TicketReservationSystemAPI.Controllers
 {
     public class TrainController : ControllerBase
     {
-        private readonly ITrainService _trainService;
+        private readonly IAdminTrainService _trainService;
 
-        public TrainController(ITrainService trainService)
+        public TrainController(IAdminTrainService trainService)
         {
             _trainService = trainService;
         }

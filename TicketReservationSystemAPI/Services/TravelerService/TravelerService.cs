@@ -107,7 +107,6 @@ namespace TicketReservationSystemAPI.Services.TravelerService
             {
                 response.Data = traveler;
                 response.Success = true;
-                response.Message = "User found";
             }
 
             return response;
@@ -203,7 +202,7 @@ namespace TicketReservationSystemAPI.Services.TravelerService
         {
             List<Claim> claims = new()
             {
-                new Claim(ClaimTypes.NameIdentifier, traveler.NIC.ToString()),
+                new Claim(ClaimTypes.NameIdentifier, traveler.NIC),
                 new Claim(ClaimTypes.Name, traveler.Email),
                 new Claim(ClaimTypes.Role, UserRole.Traveler.ToString())
             };
