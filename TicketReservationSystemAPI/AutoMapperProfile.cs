@@ -9,6 +9,7 @@ namespace TicketReservationSystemAPI
         public AutoMapperProfile()
         {
             CreateMap<Admin, AdminReturn>();
+            CreateMap<Traveler, AdminTravelerReturn>();
         }
     }
 }

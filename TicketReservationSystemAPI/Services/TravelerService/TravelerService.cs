@@ -164,6 +164,7 @@ namespace TicketReservationSystemAPI.Services.TravelerService
             return response;
         }
 
+        //private
         public async Task<bool> UserExistsNIC(string nic)
         {
             if (await _context.Travelers.Find(x => x.NIC.ToLower() == nic.ToLower()).AnyAsync())
@@ -174,6 +175,7 @@ namespace TicketReservationSystemAPI.Services.TravelerService
             return false;
         }
 
+        //private
         public async Task<bool> UserExistsEmail(string email)
         {
             if (await _context.Travelers.Find(x => x.Email.ToLower() == email.ToLower()).AnyAsync())
