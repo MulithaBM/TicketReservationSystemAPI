@@ -110,9 +110,9 @@ namespace TicketReservationSystemAPI.Controllers
         }
 
         [HttpGet("traveler/accounts")]
-        public async Task<ActionResult<ServiceResponse<List<AdminTravelerReturn>>>> GetTravelerAccounts()
+        public async Task<ActionResult<ServiceResponse<List<AdminTravelerReturn>>>> GetTravelerAccounts([FromQuery] bool? status)
         {
-            ServiceResponse<List<AdminTravelerReturn>> response = await _adminTravelerService.GetAccounts();
+            ServiceResponse<List<AdminTravelerReturn>> response = await _adminTravelerService.GetAccounts(status);
 
             if (!response.Success)
             {
