@@ -20,7 +20,7 @@ namespace TicketReservationSystemAPI.Models
         public int Seats { get; set; }
         public string DepartureStation { get; set; }
         public string ArrivalStation { get; set; }
-        public List<Guid>? ScheduleIDs { get; set; }
+        public IList<Guid> ScheduleIDs { get; set; } = new List<Guid>();
         public bool IsActive { get; set; } = true;
         public bool IsPublished { get; set; } = false;
     }

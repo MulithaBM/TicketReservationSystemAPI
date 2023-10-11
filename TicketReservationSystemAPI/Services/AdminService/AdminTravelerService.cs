@@ -1,4 +1,12 @@
-﻿using System.Security.Cryptography;
+﻿// File name: AdminTravelerService.cs
+// <summary>
+// Description: A brief description of the file's purpose.
+// </summary>
+// <author>MulithaBM</author>
+// <created>11/10/2023</created>
+// <modified>11/10/2023</modified>
+
+using System.Security.Cryptography;
 using TicketReservationSystemAPI.Data;
 using TicketReservationSystemAPI.Models;
 using TicketReservationSystemAPI.Models.Other;
@@ -24,18 +32,10 @@ namespace TicketReservationSystemAPI.Services.AdminService
             ServiceResponse<string> response = new();
 
             if (await UserExistsNIC(data.NIC))
-            {
-                response.Success = false;
-                response.Message = "User already exists";
-                return response;
-            }
+                return CreateErrorResponse(response, "Account with this NIC already exists");
 
             if (await UserExistsEmail(data.Email))
-            {
-                response.Success = false;
-                response.Message = "Account with this email already exists";
-                return response;
-            }
+                return CreateErrorResponse(response, "Account with this email already exists");
 
             CreatePasswordHash(data.Password, out byte[] passwordHash, out byte[] passwordSalt);
 
@@ -57,9 +57,9 @@ namespace TicketReservationSystemAPI.Services.AdminService
             return response;
         }
 
-        public async Task<ServiceResponse<List<AdminTravelerReturn>>> GetAccounts(bool? status = null)
+        public async Task<ServiceResponse<List<AdminGetTraveler>>> GetAccounts(bool? status)
         {
-            ServiceResponse<List<AdminTravelerReturn>> response = new();
+            ServiceResponse<List<AdminGetTraveler>> response = new();
 
             List<Traveler> travelers;
 
@@ -80,34 +80,51 @@ namespace TicketReservationSystemAPI.Services.AdminService
                 return response;
             }
 
-            response.Data = _mapper.Map<List<AdminTravelerReturn>>(travelers);
+            response.Data = _mapper.Map<List<AdminGetTraveler>>(travelers);
             response.Success = true;
 
             return response;
         }
 
-        public async Task<ServiceResponse<AdminTravelerReturn>> GetAccount(string nic)
+        public async Task<ServiceResponse<AdminGetTravelerWithReservations>> GetAccount(string nic)
         {
-            ServiceResponse<AdminTravelerReturn> response = new();
+            ServiceResponse<AdminGetTravelerWithReservations> response = new();
 
             Traveler traveler = await _context.Travelers.Find(x => x.NIC.ToLower() == nic.ToLower()).FirstOrDefaultAsync();
 
             if (traveler == null)
-            {
-                response.Success = false;
-                response.Message = "Account not found";
-                return response;
-            }
+                return CreateErrorResponse(response, "Account not found");
 
-            response.Data = _mapper.Map<AdminTravelerReturn>(traveler);
+            AdminGetTravelerWithReservations travelerWithReservations = _mapper.Map<AdminGetTravelerWithReservations>(traveler);
+
+            DateTime current = DateTime.Now;
+            DateOnly currentDate = DateOnly.FromDateTime(current);
+            TimeOnly currentTime = TimeOnly.FromDateTime(current);
+
+            var filterBuilder = Builders<Reservation>.Filter;
+            var filter = filterBuilder.Empty;
+
+            filter &= filterBuilder.Eq(reservation => reservation.TravelerId, nic);
+            filter &= filterBuilder.Eq(reservation => reservation.IsCancelled, false);
+            filter &= filterBuilder.Gte(reservation => reservation.ReservationDate, currentDate);
+            filter &= filterBuilder.Gte(reservation => reservation.DepartureTime, currentTime);
+
+            List<Reservation> reservations = await _context.Reservations
+                .Find(filter)
+                .SortBy(x => x.ReservationDate)
+                .ToListAsync();
+
+            List<AdminGetReservation> adminGetReservations = _mapper.Map<List<AdminGetReservation>>(reservations);
+
+            response.Data = travelerWithReservations;
             response.Success = true;
 
             return response;
         }
 
-        public async Task<ServiceResponse<AdminTravelerReturn>> UpdateAccount(string nic, AdminTravelerUpdate data)
+        public async Task<ServiceResponse<AdminGetTraveler>> UpdateAccount(string nic, AdminTravelerUpdate data)
         {
-            ServiceResponse<AdminTravelerReturn> response = new();
+            ServiceResponse<AdminGetTraveler> response = new();
 
             Traveler traveler = await _context.Travelers.Find(x => x.NIC.ToLower() == nic.ToLower()).FirstOrDefaultAsync();
 
@@ -138,16 +155,16 @@ namespace TicketReservationSystemAPI.Services.AdminService
 
             await _context.Travelers.ReplaceOneAsync(x => x.NIC.ToLower() == nic.ToLower(), traveler);
 
-            response.Data = _mapper.Map<AdminTravelerReturn>(traveler);
+            response.Data = _mapper.Map<AdminGetTraveler>(traveler);
             response.Success = true;
-            response.Message = "Account updated succesfully";
+            response.Message = "Account updated successfully";
 
             return response;
         }
 
-        public async Task<ServiceResponse<AdminTravelerReturn>> UpdateActiveStatus(string nic)
+        public async Task<ServiceResponse<AdminGetTraveler>> UpdateActiveStatus(string nic)
         {
-            ServiceResponse<AdminTravelerReturn> response = new();
+            ServiceResponse<AdminGetTraveler> response = new();
 
             Traveler traveler = await _context.Travelers.Find(x => x.NIC.ToLower() == nic.ToLower()).FirstOrDefaultAsync();
 
@@ -162,7 +179,7 @@ namespace TicketReservationSystemAPI.Services.AdminService
 
             await _context.Travelers.ReplaceOneAsync(x => x.NIC.ToLower() == nic.ToLower(), traveler);
 
-            response.Data = _mapper.Map<AdminTravelerReturn>(traveler);
+            response.Data = _mapper.Map<AdminGetTraveler>(traveler);
             response.Success = true;
             response.Message = "Account " + (traveler.IsActive ? "activated" : "deactivated") + " successfully";
 
@@ -215,6 +232,13 @@ namespace TicketReservationSystemAPI.Services.AdminService
             using var hmac = new HMACSHA512();
             passwordSalt = hmac.Key;
             passwordHash = hmac.ComputeHash(System.Text.Encoding.UTF8.GetBytes(password));
+        }
+
+        private static ServiceResponse<T> CreateErrorResponse<T>(ServiceResponse<T> response, string message)
+        {
+            response.Success = false;
+            response.Message = message;
+            return response;
         }
     }
 }

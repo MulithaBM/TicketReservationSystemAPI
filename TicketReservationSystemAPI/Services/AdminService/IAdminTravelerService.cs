@@ -1,4 +1,12 @@
-﻿using TicketReservationSystemAPI.Models.Other;
+﻿// File name: IAdminTravelerService.cs
+// <summary>
+// Description: A brief description of the file's purpose.
+// </summary>
+// <author>MulithaBM</author>
+// <created>09/10/2023</created>
+// <modified>11/10/2023</modified>
+
+using TicketReservationSystemAPI.Models.Other;
 using TicketReservationSystemAPI.Models.Other.Admin;
 
 namespace TicketReservationSystemAPI.Services.AdminService
@@ -6,10 +14,10 @@ namespace TicketReservationSystemAPI.Services.AdminService
     public interface IAdminTravelerService
     {
         Task<ServiceResponse<string>> CreateAccount(AdminTravelerRegistration data);
-        Task<ServiceResponse<AdminTravelerReturn>> GetAccount(string userId);
-        Task<ServiceResponse<List<AdminTravelerReturn>>> GetAccounts(bool? status = null);
-        Task<ServiceResponse<AdminTravelerReturn>> UpdateAccount(string userId, AdminTravelerUpdate data);
-        Task<ServiceResponse<AdminTravelerReturn>> UpdateActiveStatus(string userId);
+        Task<ServiceResponse<AdminGetTravelerWithReservations>> GetAccount(string userId);
+        Task<ServiceResponse<List<AdminGetTraveler>>> GetAccounts(bool? status);
+        Task<ServiceResponse<AdminGetTraveler>> UpdateAccount(string userId, AdminTravelerUpdate data);
+        Task<ServiceResponse<AdminGetTraveler>> UpdateActiveStatus(string userId);
         Task<ServiceResponse<string>> DeleteAccount(string userId);
     }
 }

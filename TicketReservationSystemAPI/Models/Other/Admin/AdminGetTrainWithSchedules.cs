@@ -15,7 +15,7 @@ namespace TicketReservationSystemAPI.Models.Other.Admin
         public string Type { get; set; }
         public string DepartureStation { get; set; }
         public string ArrivalStation { get; set; }
-        public List<AdminGetTrainSchedule>? Schedules { get; set; }
+        public List<AdminGetTrainSchedule> Schedules { get; set; } = new();
         public bool IsActive { get; set; } = true;
         public bool IsPublished { get; set; } = false;
     }

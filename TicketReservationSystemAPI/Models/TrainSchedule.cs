@@ -20,6 +20,6 @@ namespace TicketReservationSystemAPI.Models
         public TimeOnly ArrivalTime { get; set; }
         public int AvailableSeats { get; set; }
         public decimal Price { get; set; }
-        public IEnumerable<Guid>? ReservationIDs { get; set; }
+        public IList<Guid> ReservationIDs { get; set; } = new List<Guid>();
     }
 }

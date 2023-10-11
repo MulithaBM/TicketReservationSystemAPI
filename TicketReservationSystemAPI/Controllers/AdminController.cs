@@ -26,12 +26,18 @@ namespace TicketReservationSystemAPI.Controllers
         private readonly IAdminService _adminService;
         private readonly IAdminTravelerService _adminTravelerService;
         private readonly IAdminTrainService _adminTrainService;
+        private readonly IAdminReservationService _adminReservationService;
 
-        public AdminController(IAdminService adminService, IAdminTravelerService adminTravelerService, IAdminTrainService adminTrainService)
+        public AdminController(
+            IAdminService adminService, 
+            IAdminTravelerService adminTravelerService, 
+            IAdminTrainService adminTrainService,
+            IAdminReservationService adminReservationService)
         {
             _adminService = adminService;
             _adminTravelerService = adminTravelerService;
             _adminTrainService = adminTrainService;
+            _adminReservationService = adminReservationService;
         }
 
         /// <summary>
@@ -42,7 +48,7 @@ namespace TicketReservationSystemAPI.Controllers
         /// </Permission>
         /// <param name="data">Login data</param>
         /// <returns>
-        /// <see cref="ServiceResponse{T}"/> object with the token as data
+        /// <see cref="ServiceResponse{}"/> object with the token as data
         /// </returns>
         [AllowAnonymous]
         [HttpPost("login")]
@@ -108,7 +114,7 @@ namespace TicketReservationSystemAPI.Controllers
         /// </summary>
         /// <param name="data">Update data></param>
         /// <returns>
-        /// <see cref="ServiceResponse{T}"/> object with the updated account as data
+        /// <see cref="ServiceResponse{}"/> object with the updated account as data
         /// </returns>
         [HttpPut("account")]
         public async Task<ActionResult<ServiceResponse<AdminReturn>>> UpdateAccount([FromBody] AdminUpdate data)
@@ -146,6 +152,9 @@ namespace TicketReservationSystemAPI.Controllers
             return Ok(response);
         }
 
+
+        // Traveler endpoints
+
         [HttpPost("traveler/account")]
         public async Task<ActionResult<ServiceResponse<string>>> CreateTravelAccount([FromBody] AdminTravelerRegistration data)
         {
@@ -160,9 +169,9 @@ namespace TicketReservationSystemAPI.Controllers
         }
 
         [HttpGet("traveler/accounts")]
-        public async Task<ActionResult<ServiceResponse<List<AdminTravelerReturn>>>> GetTravelerAccounts([FromQuery] bool? status)
+        public async Task<ActionResult<ServiceResponse<List<AdminGetTraveler>>>> GetTravelerAccounts([FromQuery] bool? status)
         {
-            ServiceResponse<List<AdminTravelerReturn>> response = await _adminTravelerService.GetAccounts(status);
+            ServiceResponse<List<AdminGetTraveler>> response = await _adminTravelerService.GetAccounts(status);
 
             if (!response.Success)
             {
@@ -173,9 +182,9 @@ namespace TicketReservationSystemAPI.Controllers
         }
 
         [HttpGet("traveler/account/{nic}")]
-        public async Task<ActionResult<ServiceResponse<AdminTravelerReturn>>> GetTravelerAccount(string nic)
+        public async Task<ActionResult<ServiceResponse<AdminGetTravelerWithReservations>>> GetTravelerAccount(string nic)
         {
-            ServiceResponse<AdminTravelerReturn> response = await _adminTravelerService.GetAccount(nic);
+            ServiceResponse<AdminGetTravelerWithReservations> response = await _adminTravelerService.GetAccount(nic);
 
             if (!response.Success)
             {
@@ -186,9 +195,9 @@ namespace TicketReservationSystemAPI.Controllers
         }
 
         [HttpPut("traveler/account/{nic}")]
-        public async Task<ActionResult<ServiceResponse<AdminTravelerReturn>>> UpdateTravelerAccount(string nic, [FromBody] AdminTravelerUpdate data)
+        public async Task<ActionResult<ServiceResponse<AdminGetTraveler>>> UpdateTravelerAccount(string nic, [FromBody] AdminTravelerUpdate data)
         {
-            ServiceResponse<AdminTravelerReturn> response = await _adminTravelerService.UpdateAccount(nic, data);
+            ServiceResponse<AdminGetTraveler> response = await _adminTravelerService.UpdateAccount(nic, data);
 
             if (!response.Success)
             {
@@ -199,9 +208,9 @@ namespace TicketReservationSystemAPI.Controllers
         }
 
         [HttpPut("traveler/account/{nic}/active")]
-        public async Task<ActionResult<ServiceResponse<AdminTravelerReturn>>> UpdateTravelerActiveStatus(string nic)
+        public async Task<ActionResult<ServiceResponse<AdminGetTraveler>>> UpdateTravelerActiveStatus(string nic)
         {
-            ServiceResponse<AdminTravelerReturn> response = await _adminTravelerService.UpdateActiveStatus(nic);
+            ServiceResponse<AdminGetTraveler> response = await _adminTravelerService.UpdateActiveStatus(nic);
 
             if (!response.Success)
             {
@@ -223,6 +232,9 @@ namespace TicketReservationSystemAPI.Controllers
 
             return Ok(response);
         }
+
+
+        // Train endpoints
 
         [HttpPost("train")]
         public async Task<ActionResult<ServiceResponse<string>>> CreateTrain([FromBody] AdminCreateTrain data)
@@ -312,6 +324,24 @@ namespace TicketReservationSystemAPI.Controllers
             return Ok(response);
         }
 
+        [HttpPut("train/{id}/cancel")]
+        public async Task<ActionResult<ServiceResponse<string>>> CancelTrain(
+            string id,
+            [FromBody] string date)
+        {
+            ServiceResponse<string> response = await _adminTrainService.CancelTrain(id, date);
+
+            if (!response.Success)
+            {
+                return BadRequest(response);
+            }
+
+            return Ok(response);
+        }
+
+
+        // Train schedule endpoints
+
         [HttpPost("train/schedule")]
         public async Task<ActionResult<ServiceResponse<string>>> AddSchedule([FromBody] AdminAddSchedule data)
         {
@@ -366,12 +396,53 @@ namespace TicketReservationSystemAPI.Controllers
             return Ok(response);
         }
 
-        [HttpPut("train/schedule/{id}/cancel")]
-        public async Task<ActionResult<ServiceResponse<string>>> CancelSchedule(
-            string id,
-            [FromBody] string date)
+        // Reservation endpoints
+
+        [HttpPost("reservation")]
+        public async Task<ActionResult<ServiceResponse<string>>> CreateReservation([FromBody] AdminCreateReservation data)
         {
-            ServiceResponse<string> response = await _adminTrainService.CancelTrain(id, date);
+            ServiceResponse<string> response = await _adminReservationService.CreateReservation(data);
+
+            if (!response.Success)
+            {
+                return BadRequest(response);
+            }
+
+            return Ok(response);
+        }
+
+        [HttpGet("reservation/{id}")]
+        public async Task<ActionResult<ServiceResponse<List<AdminGetReservation>>>> GetReservations(string id)
+        {
+            ServiceResponse<AdminGetReservation> response = await _adminReservationService.GetReservation(id);
+
+            if (!response.Success)
+            {
+                return BadRequest(response);
+            }
+
+            return Ok(response);
+        }
+
+        [HttpPut("reservation/{id}")]
+        public async Task<ActionResult<ServiceResponse<AdminGetReservation>>> UpdateReservation(
+            string id,
+            [FromBody] AdminUpdateReservation data)
+        {
+            ServiceResponse<AdminGetReservation> response = await _adminReservationService.UpdateReservation(id, data);
+
+            if (!response.Success)
+            {
+                return BadRequest(response);
+            }
+
+            return Ok(response);
+        }
+
+        [HttpPut("reservation/{id}/cancel")]
+        public async Task<ActionResult<ServiceResponse<string>>> CancelReservation(string id)
+        {
+            ServiceResponse<string> response = await _adminReservationService.CancelReservation(id);
 
             if (!response.Success)
             {

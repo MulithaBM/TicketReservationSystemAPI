@@ -1,4 +1,11 @@
-﻿// Generate comment header block and inline comments for this class via Snippets-Generate_Comments
+﻿// File name: AdminService.cs
+// <summary>
+// Description: A brief description of the file's purpose.
+// </summary>
+// <author>MulithaBM</author>
+// <created>11/10/2023</created>
+// <modified>11/10/2023</modified>
+
 using AutoMapper;
 using Microsoft.IdentityModel.Tokens;
 using MongoDB.Driver;
@@ -24,11 +31,6 @@ namespace TicketReservationSystemAPI.Services.AdminService
             _mapper = mapper;
         }
 
-        /// <summary>
-        /// Login as an admin
-        /// </summary>
-        /// <param name="data"></param>
-        /// <returns></returns>
         public async Task<ServiceResponse<string>> Login(AdminLogin data)
         {
             ServiceResponse<string> response = new();
@@ -57,11 +59,6 @@ namespace TicketReservationSystemAPI.Services.AdminService
             return response;
         }
 
-        /// <summary>
-        /// Register a new account
-        /// </summary>
-        /// <param name="data"></param>
-        /// <returns></returns>
         public async Task<ServiceResponse<string>> Register(AdminRegistration data)
         {
             ServiceResponse<string> response = new();
@@ -92,12 +89,6 @@ namespace TicketReservationSystemAPI.Services.AdminService
             return response;
         }
 
-        // describe the GetAccounts method
-        /// <summary>
-        /// Get account details using user ID
-        /// </summary>
-        /// <param name="userId">NIC of user</param>
-        /// <returns></returns>
         public async Task<ServiceResponse<AdminReturn>> GetAccount(string userId)
         {
             ServiceResponse<AdminReturn> response = new();
@@ -119,12 +110,6 @@ namespace TicketReservationSystemAPI.Services.AdminService
             return response;
         }
 
-        /// <summary>
-        /// This method updates account using user's NIC
-        /// </summary>
-        /// <param name="userId">ID of user</param>
-        /// <param name="data">Update data</param>
-        /// <returns></returns>
         public async Task<ServiceResponse<AdminReturn>> UpdateAccount(string userId, AdminUpdate data)
         {
             ServiceResponse<AdminReturn> response = new();

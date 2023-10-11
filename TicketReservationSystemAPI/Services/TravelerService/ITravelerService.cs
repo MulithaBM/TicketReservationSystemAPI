@@ -1,4 +1,12 @@
-﻿using TicketReservationSystemAPI.Models;
+﻿// File name: ITravelerService.cs
+// <summary>
+// Description: A brief description of the file's purpose.
+// </summary>
+// <author>MulithaBM</author>
+// <created>23/09/2023</created>
+// <modified>11/10/2023</modified>
+
+using TicketReservationSystemAPI.Models;
 using TicketReservationSystemAPI.Models.Other;
 
 namespace TicketReservationSystemAPI.Services.TravelerService
