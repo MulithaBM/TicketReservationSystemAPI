@@ -1,4 +1,4 @@
-﻿// File name: AdminTravelerReturn.cs
+﻿// File name: AdminUpdateTrain.cs
 // <summary>
 // Description: A brief description of the file's purpose.
 // </summary>
@@ -6,16 +6,14 @@
 // <created>09/10/2023</created>
 // <modified>11/10/2023</modified>
 
-using MongoDB.Bson;
-
 namespace TicketReservationSystemAPI.Models.Other.Admin
 {
-    public class AdminTravelerReturn
+    public class AdminUpdateTrain
     {
-        public string NIC { get; set; }
         public string Name { get; set; }
-        public string Email { get; set; }
-        public string ContactNo { get; set; }
-        public bool IsActive { get; set; }
+        public int Type { get; set; }
+        public int Seats { get; set; }
+        public string DepartureStation { get; set; }
+        public string ArrivalStation { get; set; }
     }
 }

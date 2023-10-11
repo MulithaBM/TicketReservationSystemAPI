@@ -1,4 +1,5 @@
-﻿using AutoMapper;
+﻿// Generate comment header block and inline comments for this class via Snippets-Generate_Comments
+using AutoMapper;
 using Microsoft.IdentityModel.Tokens;
 using MongoDB.Driver;
 using System.IdentityModel.Tokens.Jwt;
@@ -23,6 +24,11 @@ namespace TicketReservationSystemAPI.Services.AdminService
             _mapper = mapper;
         }
 
+        /// <summary>
+        /// Login as an admin
+        /// </summary>
+        /// <param name="data"></param>
+        /// <returns></returns>
         public async Task<ServiceResponse<string>> Login(AdminLogin data)
         {
             ServiceResponse<string> response = new();
@@ -51,6 +57,11 @@ namespace TicketReservationSystemAPI.Services.AdminService
             return response;
         }
 
+        /// <summary>
+        /// Register a new account
+        /// </summary>
+        /// <param name="data"></param>
+        /// <returns></returns>
         public async Task<ServiceResponse<string>> Register(AdminRegistration data)
         {
             ServiceResponse<string> response = new();
@@ -81,6 +92,12 @@ namespace TicketReservationSystemAPI.Services.AdminService
             return response;
         }
 
+        // describe the GetAccounts method
+        /// <summary>
+        /// Get account details using user ID
+        /// </summary>
+        /// <param name="userId">NIC of user</param>
+        /// <returns></returns>
         public async Task<ServiceResponse<AdminReturn>> GetAccount(string userId)
         {
             ServiceResponse<AdminReturn> response = new();
@@ -102,6 +119,12 @@ namespace TicketReservationSystemAPI.Services.AdminService
             return response;
         }
 
+        /// <summary>
+        /// This method updates account using user's NIC
+        /// </summary>
+        /// <param name="userId">ID of user</param>
+        /// <param name="data">Update data</param>
+        /// <returns></returns>
         public async Task<ServiceResponse<AdminReturn>> UpdateAccount(string userId, AdminUpdate data)
         {
             ServiceResponse<AdminReturn> response = new();
@@ -201,7 +224,7 @@ namespace TicketReservationSystemAPI.Services.AdminService
             {
                 new Claim(ClaimTypes.NameIdentifier, admin.Id.ToString()),
                 new Claim(ClaimTypes.Name, admin.Email),
-                new Claim(ClaimTypes.Role, UserRole.Admin.ToString())
+                new Claim(ClaimTypes.Role, SystemRole.Admin.ToString())
             };
             SymmetricSecurityKey key = new(System.Text.Encoding.UTF8.GetBytes(JWTSettings.Token));
 

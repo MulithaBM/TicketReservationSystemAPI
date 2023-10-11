@@ -47,6 +47,7 @@ builder.Services.AddAutoMapper(typeof(Program).Assembly);
 // Admin services
 builder.Services.AddSingleton<IAdminService, AdminService>();
 builder.Services.AddSingleton<IAdminTravelerService, AdminTravelerService>();
+builder.Services.AddSingleton<IAdminTrainService, AdminTrainService>();
 
 builder.Services.AddSingleton<IAgentService, AgentService>();
 

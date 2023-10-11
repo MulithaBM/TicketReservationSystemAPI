@@ -1,6 +1,6 @@
-﻿// File name: ReservationStatus.cs
+﻿// File name: UserRole.cs
 // <summary>
-// Description: Enum for reservation status
+// Description: Enum for system roles
 // </summary>
 // <author>MulithaBM</author>
 // <created>11/09/2023</created>
@@ -8,10 +8,10 @@
 
 namespace TicketReservationSystemAPI.Models.enums
 {
-    public enum ReservationStatus
+    public enum SystemRole
     {
-        Pending,
-        Confirmed,
-        Cancelled
+        Admin,
+        TravelAgent,
+        Traveler
     }
 }

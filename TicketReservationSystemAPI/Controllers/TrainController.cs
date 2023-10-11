@@ -1,4 +1,12 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿// File name: TrainController.cs
+// <summary>
+// Description: A brief description of the file's purpose.
+// </summary>
+// <author>MulithaBM</author>
+// <created>09/10/2023</created>
+// <modified>11/10/2023</modified>
+
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TicketReservationSystemAPI.Models;
 using TicketReservationSystemAPI.Models.Other;
@@ -8,9 +16,9 @@ namespace TicketReservationSystemAPI.Controllers
 {
     public class TrainController : ControllerBase
     {
-        private readonly IAdminTrainService _trainService;
+        private readonly ITrainService _trainService;
 
-        public TrainController(IAdminTrainService trainService)
+        public TrainController(ITrainService trainService)
         {
             _trainService = trainService;
         }

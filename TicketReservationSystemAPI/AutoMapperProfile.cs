@@ -10,6 +10,9 @@ namespace TicketReservationSystemAPI
         {
             CreateMap<Admin, AdminReturn>();
             CreateMap<Traveler, AdminTravelerReturn>();
+            CreateMap<Train, AdminGetTrain>();
+            CreateMap<Train, AdminGetTrainWithSchedules>();
+            CreateMap<TrainSchedule, AdminGetTrainSchedule>();
         }
     }
 }

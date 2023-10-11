@@ -110,7 +110,7 @@ namespace TicketReservationSystemAPI.Services.AgentService
             {
                 new Claim(ClaimTypes.NameIdentifier, agent.Id.ToString()),
                 new Claim(ClaimTypes.Email, agent.Email),
-                new Claim(ClaimTypes.Role, UserRole.TravelAgent.ToString())
+                new Claim(ClaimTypes.Role, SystemRole.TravelAgent.ToString())
             };
 
             SymmetricSecurityKey key = new(System.Text.Encoding.UTF8.GetBytes(JWTSettings.Token));
