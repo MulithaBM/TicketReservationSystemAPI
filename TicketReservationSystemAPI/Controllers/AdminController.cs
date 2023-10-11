@@ -15,7 +15,6 @@ using TicketReservationSystemAPI.Services.AdminService;
 
 namespace TicketReservationSystemAPI.Controllers
 {
-    // what is the permission cref?
     /// <permission cref="ClaimTypes.Role">
     /// Admin (Back-Office) has access to the following endpoints:
     /// </permission>
