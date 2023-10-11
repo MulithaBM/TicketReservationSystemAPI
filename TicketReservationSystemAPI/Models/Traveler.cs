@@ -1,4 +1,12 @@
-﻿using MongoDB.Bson;
+﻿// File name: Traveler.cs
+// <summary>
+// Description: A brief description of the file's purpose.
+// </summary>
+// <author>MulithaBM</author>
+// <created>11/09/2023</created>
+// <modified>11/10/2023</modified>
+
+using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
 
 namespace TicketReservationSystemAPI.Models
@@ -13,6 +21,6 @@ namespace TicketReservationSystemAPI.Models
         public byte[] PasswordHash { get; set; }
         public byte[] PasswordSalt { get; set; }
         public bool IsActive { get; set; }
-        public IEnumerable<ObjectId>? Reservations { get; set; }
+        public IEnumerable<Guid>? ReservationIDs { get; set; }
     }
 }

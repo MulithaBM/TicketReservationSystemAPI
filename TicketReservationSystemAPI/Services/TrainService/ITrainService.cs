@@ -3,7 +3,7 @@ using TicketReservationSystemAPI.Models.Other;
 
 namespace TicketReservationSystemAPI.Services.TrainService
 {
-    public interface IAdminTrainService
+    public interface ITrainService
     {
         Task<ServiceResponse<IEnumerable<Train>>> GetTrains();
         Task<ServiceResponse<IEnumerable<Train>>> GetTrainS(bool isActive, bool isPublished, string departureStation, string arrivalStation, string date);

@@ -1,4 +1,12 @@
-﻿using Microsoft.Extensions.Options;
+﻿// File name: DataContext.cs
+// <summary>
+// Description: MongoDB database context
+// </summary>
+// <author>MulithaBM</author>
+// <created>22/09/2023</created>
+// <modified>11/10/2023</modified>
+
+using Microsoft.Extensions.Options;
 using MongoDB.Driver;
 using TicketReservationSystemAPI.Models;
 

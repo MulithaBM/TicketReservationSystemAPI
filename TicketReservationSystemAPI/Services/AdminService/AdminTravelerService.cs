@@ -41,8 +41,8 @@ namespace TicketReservationSystemAPI.Services.AdminService
 
             Traveler traveler = new()
             {
-                Name = data.Name,
                 NIC = data.NIC,
+                Name = data.Name,
                 Email = data.Email,
                 PasswordHash = passwordHash,
                 PasswordSalt = passwordSalt,

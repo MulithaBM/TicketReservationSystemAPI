@@ -206,7 +206,7 @@ namespace TicketReservationSystemAPI.Services.TravelerService
             {
                 new Claim(ClaimTypes.NameIdentifier, traveler.NIC),
                 new Claim(ClaimTypes.Name, traveler.Email),
-                new Claim(ClaimTypes.Role, UserRole.Traveler.ToString())
+                new Claim(ClaimTypes.Role, SystemRole.Traveler.ToString())
             };
             SymmetricSecurityKey key = new(System.Text.Encoding.UTF8.GetBytes(JWTSettings.Token));
 

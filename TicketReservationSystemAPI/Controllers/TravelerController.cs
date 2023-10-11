@@ -1,4 +1,12 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿// File name: TravelerController.cs
+// <summary>
+// Description: API controller for traveler related operations
+// </summary>
+// <author>MulithaBM</author>
+// <created>12/09/2023</created>
+// <modified>11/10/2023</modified>
+
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 using TicketReservationSystemAPI.Models;

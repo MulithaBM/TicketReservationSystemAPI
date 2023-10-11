@@ -1,4 +1,12 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿// File name: AgentController.cs
+// <summary>
+// Description: API controller for travel agent related operations
+// </summary>
+// <author>MulithaBM</author>
+// <created>23/09/2023</created>
+// <modified>11/10/2023</modified>
+
+using Microsoft.AspNetCore.Mvc;
 using TicketReservationSystemAPI.Models.Other;
 using TicketReservationSystemAPI.Services.AgentService;
 
