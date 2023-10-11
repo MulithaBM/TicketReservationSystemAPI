@@ -1,6 +1,6 @@
 ﻿// File name: AdminTrainService.cs
 // <summary>
-// Description: A brief description of the file's purpose.
+// Description: Service class for admin train related operations
 // </summary>
 // <author>MulithaBM</author>
 // <created>11/10/2023</created>
@@ -57,10 +57,10 @@ namespace TicketReservationSystemAPI.Services.AdminService
         /// <summary>
         /// Get all trains
         /// </summary>
-        /// <param name="activeStatus">(optional) Active status of the train</param>
-        /// <param name="publishStatus">(optional) Publish status of the train</param>
-        /// <param name="departureStation">(optional) Departure station</param>
-        /// <param name="arrivalStation">(optional) Arrival station</param>
+        /// <param name="activeStatus">Active status of the train</param>
+        /// <param name="publishStatus">Publish status of the train</param>
+        /// <param name="departureStation">Departure station</param>
+        /// <param name="arrivalStation">Arrival station</param>
         /// <returns></returns>
         public async Task<ServiceResponse<List<AdminGetTrain>>> GetTrains(
             bool activeStatus, 
@@ -323,7 +323,7 @@ namespace TicketReservationSystemAPI.Services.AdminService
         /// <param name="id">Train ID</param>
         /// <param name="date">Date of cancellation</param>
         /// <returns></returns>
-        public async Task<ServiceResponse<string>> CancelTrain(string id, string date)
+        public async Task<ServiceResponse<string>> CancelTrain(string id, AdminCancelTrain data)
         {
             ServiceResponse<string> response = new();
 
@@ -338,7 +338,7 @@ namespace TicketReservationSystemAPI.Services.AdminService
                 return response;
             }
 
-            DateOnly scheduleDate = DateOnly.FromDateTime(DateTime.Parse(date));
+            DateOnly scheduleDate = DateOnly.Parse(data.Date);
 
             List<Guid> schedules = await _context.TrainSchedules
                 .Find(x => x.TrainId == trainId && x.Date == scheduleDate)
@@ -356,7 +356,7 @@ namespace TicketReservationSystemAPI.Services.AdminService
                 if (schedulesWithReservations)
                 {
                     response.Success = false;
-                    response.Message = "Cannot cancel train with reservations";
+                    response.Message = "Cannot cancel train with active reservations";
                     return response;
                 }
 
@@ -396,8 +396,6 @@ namespace TicketReservationSystemAPI.Services.AdminService
                 response.Message = "Train not found";
                 return response;
             }
-
-            DateOnly date = DateOnly.FromDateTime(DateTime.Parse(data.Date));
 
             TrainSchedule schedule = new()
             {

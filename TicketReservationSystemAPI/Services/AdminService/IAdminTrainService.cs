@@ -20,7 +20,7 @@ namespace TicketReservationSystemAPI.Services.AdminService
         // Task<ServiceResponse<string>> UpdateTrain(AdminUpdateTrain data);
         Task<ServiceResponse<bool>> UpdateActiveStatus(string id, bool status);
         Task<ServiceResponse<bool>> UpdatePublishStatus(string id, bool status);    
-        Task<ServiceResponse<string>> CancelTrain(string id, string date);
+        Task<ServiceResponse<string>> CancelTrain(string id, AdminCancelTrain data);
         Task<ServiceResponse<string>> AddSchedule(AdminAddSchedule data);
         Task<ServiceResponse<AdminGetTrainSchedule>> GetSchedule(string id);
         Task<ServiceResponse<AdminGetTrainSchedule>> UpdateSchedule(string id, AdminUpdateSchedule data);

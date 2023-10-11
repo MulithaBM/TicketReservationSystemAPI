@@ -1,6 +1,6 @@
 ﻿// File name: TravelerService.cs
 // <summary>
-// Description: A brief description of the file's purpose.
+// Description: Service class for traveler related operations
 // </summary>
 // <author>MulithaBM</author>
 // <created>11/10/2023</created>
@@ -11,169 +11,234 @@ using MongoDB.Driver;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
+using AutoMapper;
 using TicketReservationSystemAPI.Data;
 using TicketReservationSystemAPI.Models;
 using TicketReservationSystemAPI.Models.enums;
 using TicketReservationSystemAPI.Models.Other;
+using TicketReservationSystemAPI.Models.Other.Traveler;
 
 namespace TicketReservationSystemAPI.Services.TravelerService
 {
     public class TravelerService : ITravelerService
     {
         private readonly DataContext _context;
+        private readonly IMapper _mapper;
+        private readonly ILogger<TravelerService> _logger;
 
-        public TravelerService(DataContext context)
+        public TravelerService(DataContext context, IMapper mapper, ILogger<TravelerService> logger)
         {
             _context = context;
+            _mapper = mapper;
+            _logger = logger;
         }
 
+        /// <summary>
+        /// Traveler login
+        /// </summary>
+        /// <param name="data">Login data</param>
+        /// <returns>
+        /// JWT authorization token
+        /// </returns>
         public async Task<ServiceResponse<string>> Login(TravelerLogin data)
         {
             ServiceResponse<string> response = new();
 
-            Traveler traveler = await _context.Travelers.Find(x => x.Email.ToLower() == data.Email.ToLower()).FirstOrDefaultAsync();
+            try
+            {
+                Traveler traveler = await _context.Travelers
+                    .Find(x => x.Email.ToLower() == data.Email.ToLower())
+                    .FirstOrDefaultAsync();
 
-            if (traveler == null)
-            {
-                response.Success = false;
-                response.Message = "User not found";
-                return response;
-            }
-            else if (!VerifyPasswordHash(data.Password, traveler.PasswordHash, traveler.PasswordSalt))
-            {
-                response.Success = false;
-                response.Message = "Wrong password";
-                return response;
-            }
-            else if (!traveler.IsActive)
-            {
-                response.Success = false;
-                response.Message = "Account deactivated";
-                return response;
-            }
-            else
-            {
+                if (traveler == null)
+                    return CreateErrorResponse(response, "User not found");
+
+                if (!VerifyPasswordHash(data.Password, traveler.PasswordHash, traveler.PasswordSalt))
+                    return CreateErrorResponse(response, "Incorrect password");
+
+                if (!traveler.IsActive)
+                    return CreateErrorResponse(response, "User account is deactivated");
+
                 response.Data = CreateToken(traveler);
                 response.Success = true;
                 response.Message = "Login successful";
-            }
 
-            return response;
+                return response;
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, e.Message);
+                return CreateErrorResponse(response, "Internal server error");
+            }
         }
 
-        public async Task<ServiceResponse<int>> Register(TravelerRegistration data)
+        /// <summary>
+        /// Traveler register
+        /// </summary>
+        /// <param name="data">Register data</param>
+        /// <returns>null</returns>
+        public async Task<ServiceResponse<string>> Register(TravelerRegistration data)
         {
-            ServiceResponse<int> response = new();
+            ServiceResponse<string> response = new();
 
-            if (await UserExistsNIC(data.NIC))
+            try
             {
-                response.Success = false;
-                response.Message = "Account with the NIC already exists";
-                return response;
-            }
-            if (await UserExistsEmail(data.Email))
-            {
-                response.Success = false;
-                response.Message = "Account with the Email already exists";
-                return response;
-            }
+                if (await UserExistsNIC(data.NIC))
+                    return CreateErrorResponse(response, "Account with the NIC already exists");
 
-            CreatePasswordHash(data.Password, out byte[] passwordHash, out byte[] passwordSalt);
+                if (await UserExistsEmail(data.Email))
+                    return CreateErrorResponse(response, "Account with the email already exists");
 
-            Traveler newTraveler = new()
-            {
-                NIC = data.NIC,
-                Name = data.Name,
-                Email = data.Email,
-                PasswordHash = passwordHash,
-                PasswordSalt = passwordSalt,
-                ContactNo = data.ContactNo,
-                IsActive = true
-            };
+                CreatePasswordHash(data.Password, out byte[] passwordHash, out byte[] passwordSalt);
 
-            await _context.Travelers.InsertOneAsync(newTraveler);
+                Traveler traveler = new()
+                {
+                    NIC = data.NIC,
+                    Name = data.Name,
+                    Email = data.Email,
+                    PasswordHash = passwordHash,
+                    PasswordSalt = passwordSalt,
+                    ContactNo = data.ContactNo,
+                    IsActive = true
+                };
 
-            response.Success = true;
-            response.Message = "User created successfully";
+                await _context.Travelers.InsertOneAsync(traveler);
 
-            return response;
-        }
-
-        public async Task<ServiceResponse<Traveler>> GetAccount(string userId)
-        {
-            ServiceResponse<Traveler> response = new();
-
-            Traveler traveler = await _context.Travelers.Find(x => x.NIC == userId).FirstOrDefaultAsync();
-
-            if (traveler == null)
-            {
-                response.Success = false;
-                response.Message = "User not found";
-                return response;
-            }
-            else
-            {
-                response.Data = traveler;
                 response.Success = true;
-            }
+                response.Message = "User created successfully";
 
-            return response;
-        }
+                _logger.LogInformation($"User registered. User ID { traveler.NIC }");
 
-        public async Task<ServiceResponse<int>> UpdateAccount(string userId, TravelerUpdate data)
-        {
-            ServiceResponse<int> response = new();
-
-            Traveler traveler = await _context.Travelers.Find(x => x.NIC == userId).FirstOrDefaultAsync();
-
-            if (traveler == null)
-            {
-                response.Success = false;
-                response.Message = "User not found";
                 return response;
             }
-            else
+            catch (Exception e)
             {
-                // Check if null check is necessary
-                if (data.Name != null) traveler.Name = data.Name;
-                if (data.ContactNo != null) traveler.ContactNo = data.ContactNo;
+                _logger.LogError(e, e.Message);
+                return CreateErrorResponse(response, "Internal server error");
+            }
+        }
+
+        /// <summary>
+        /// Get traveler account
+        /// </summary>
+        /// <param name="userId">User NIC</param>
+        /// <returns>
+        /// Get traveler account with reservations
+        /// </returns>
+        public async Task<ServiceResponse<TravelerReturn>> GetAccount(string userId)
+        {
+            ServiceResponse<TravelerReturn> response = new();
+
+            try
+            {
+                Traveler traveler = await _context.Travelers.Find(x => x.NIC == userId).FirstOrDefaultAsync();
+
+                if (traveler == null)
+                    return CreateErrorResponse(response, "User not found");
+
+                TravelerReturn travelerReturn = _mapper.Map<TravelerReturn>(traveler);
+
+                // Get the list of active reservations
+                List<Reservation> reservations = await _context.Reservations
+                    .Find(x => x.TravelerId == userId && x.IsCancelled == false)
+                    .ToListAsync();
+
+                List<TravelerGetReservation> travelerReservations = _mapper.Map<List<TravelerGetReservation>>(reservations);
+
+                travelerReturn.Reservations = travelerReservations;
+
+                response.Data = travelerReturn;
+                response.Success = true;
+
+                return response;
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, e.Message);
+                return CreateErrorResponse(response, "Internal server error");
+            }
+        }
+
+        /// <summary>
+        /// Update traveler account
+        /// </summary>
+        /// <param name="userId">User NIC</param>
+        /// <param name="data">Update data</param>
+        /// <returns>null</returns>
+        public async Task<ServiceResponse<string>> UpdateAccount(string userId, TravelerUpdate data)
+        {
+            ServiceResponse<string> response = new();
+
+            try
+            {
+                Traveler traveler = await _context.Travelers.Find(x => x.NIC == userId).FirstOrDefaultAsync();
+
+                if (traveler == null)
+                    return CreateErrorResponse(response, "User not found");
+
+                if (!string.IsNullOrEmpty(data.Name)) traveler.Name = data.Name;
+                if (!string.IsNullOrEmpty(data.ContactNo)) traveler.ContactNo = data.ContactNo;
 
                 await _context.Travelers.ReplaceOneAsync(x => x.NIC == userId, traveler);
 
                 response.Success = true;
                 response.Message = "User updated successfully";
-            }
 
-            return response;
-        }
+                _logger.LogInformation($"User updated. User ID { traveler.NIC }");
 
-        public async Task<ServiceResponse<int>> DeactivateAccount(string userId)
-        {
-            ServiceResponse<int> response = new();
-
-            Traveler traveler = await _context.Travelers.Find(x => x.NIC == userId).FirstOrDefaultAsync();
-
-            if (traveler == null)
-            {
-                response.Success = false;
-                response.Message = "User not found";
                 return response;
             }
-            else
+            catch (Exception e)
             {
+                _logger.LogError(e, e.Message);
+                return CreateErrorResponse(response, "Internal server error");
+            }
+        }
+
+        /// <summary>
+        /// Deactivate traveler account
+        /// </summary>
+        /// <param name="userId">User NIC</param>
+        /// <returns>
+        /// Boolean status of the account (false)
+        /// </returns>
+        public async Task<ServiceResponse<bool>> DeactivateAccount(string userId)
+        {
+            ServiceResponse<bool> response = new();
+
+            try
+            {
+                Traveler traveler = await _context.Travelers.Find(x => x.NIC == userId).FirstOrDefaultAsync();
+
+                if (traveler == null)
+                    return CreateErrorResponse(response, "User not found");
+
                 traveler.IsActive = false;
 
                 await _context.Travelers.ReplaceOneAsync(x => x.NIC == userId, traveler);
 
                 response.Success = true;
-                response.Message = "User account deactivated succesfully";
-            }
+                response.Message = "User account deactivated successfully";
 
-            return response;
+                _logger.LogInformation($"User deactivated. User ID {traveler.NIC}");
+
+                return response;
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, e.Message);
+                return CreateErrorResponse(response, "Internal server error");
+            }
         }
 
-        //private
-        public async Task<bool> UserExistsNIC(string nic)
+        /// <summary>
+        /// Helper method to check if the user exists using NIC
+        /// </summary>
+        /// <param name="nic">User NIC</param>
+        /// <returns>
+        /// Boolean status
+        /// </returns>
+        private async Task<bool> UserExistsNIC(string nic)
         {
             if (await _context.Travelers.Find(x => x.NIC.ToLower() == nic.ToLower()).AnyAsync())
             {
@@ -183,8 +248,14 @@ namespace TicketReservationSystemAPI.Services.TravelerService
             return false;
         }
 
-        //private
-        public async Task<bool> UserExistsEmail(string email)
+        /// <summary>
+        /// Helper method to check if the user exists using email
+        /// </summary>
+        /// <param name="email">User email</param>
+        /// <returns>
+        /// Boolean status
+        /// </returns>
+        private async Task<bool> UserExistsEmail(string email)
         {
             if (await _context.Travelers.Find(x => x.Email.ToLower() == email.ToLower()).AnyAsync())
             {
@@ -194,6 +265,12 @@ namespace TicketReservationSystemAPI.Services.TravelerService
             return false;
         }
 
+        /// <summary>
+        /// Helper method to create password hash
+        /// </summary>
+        /// <param name="password"></param>
+        /// <param name="passwordHash"></param>
+        /// <param name="passwordSalt"></param>
         private static void CreatePasswordHash(string password, out byte[] passwordHash, out byte[] passwordSalt)
         {
             using var hmac = new HMACSHA512();
@@ -201,6 +278,15 @@ namespace TicketReservationSystemAPI.Services.TravelerService
             passwordHash = hmac.ComputeHash(System.Text.Encoding.UTF8.GetBytes(password));
         }
 
+        /// <summary>
+        /// Helper method to verify password hash
+        /// </summary>
+        /// <param name="password"></param>
+        /// <param name="passwordHash"></param>
+        /// <param name="passwordSalt"></param>
+        /// <returns>
+        /// Boolean status
+        /// </returns>
         private static bool VerifyPasswordHash(string password, byte[] passwordHash, byte[] passwordSalt)
         {
             using var hmac = new HMACSHA512(passwordSalt);
@@ -208,6 +294,13 @@ namespace TicketReservationSystemAPI.Services.TravelerService
             return computeHash.SequenceEqual(passwordHash);
         }
 
+        /// <summary>
+        /// Helper method to create JWT token
+        /// </summary>
+        /// <param name="traveler"></param>
+        /// <returns>
+        /// JWT token
+        /// </returns>
         private string CreateToken(Traveler traveler)
         {
             List<Claim> claims = new()
@@ -230,6 +323,23 @@ namespace TicketReservationSystemAPI.Services.TravelerService
             JwtSecurityTokenHandler tokenHandler = new();
             SecurityToken token = tokenHandler.CreateToken(tokenDescriptor);
             return tokenHandler.WriteToken(token);
+        }
+
+        /// <summary>
+        /// Helper method to create error response
+        /// </summary>
+        /// <typeparam name="T">Response.Data type</typeparam>
+        /// <param name="response">Response</param>
+        /// <param name="message">Error message</param>
+        /// <returns>
+        /// Response with error message
+        /// </returns>
+        private static ServiceResponse<T> CreateErrorResponse<T>(ServiceResponse<T> response, string message)
+        {
+            response.Success = false;
+            response.Message = message;
+
+            return response;
         }
     }
 }

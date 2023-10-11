@@ -1,6 +1,6 @@
 ﻿// File name: ITravelerService.cs
 // <summary>
-// Description: A brief description of the file's purpose.
+// Description: Interface of the service class for traveler related operations
 // </summary>
 // <author>MulithaBM</author>
 // <created>23/09/2023</created>
@@ -8,15 +8,16 @@
 
 using TicketReservationSystemAPI.Models;
 using TicketReservationSystemAPI.Models.Other;
+using TicketReservationSystemAPI.Models.Other.Traveler;
 
 namespace TicketReservationSystemAPI.Services.TravelerService
 {
     public interface ITravelerService
     {
-        Task<ServiceResponse<int>> Register(TravelerRegistration traveler);
+        Task<ServiceResponse<string>> Register(TravelerRegistration traveler);
         Task<ServiceResponse<string>> Login(TravelerLogin traveler);
-        Task<ServiceResponse<Traveler>> GetAccount(string userId);
-        Task<ServiceResponse<int>> UpdateAccount(string userId, TravelerUpdate traveler);
-        Task<ServiceResponse<int>> DeactivateAccount(string userId);
+        Task<ServiceResponse<TravelerReturn>> GetAccount(string userId);
+        Task<ServiceResponse<string>> UpdateAccount(string userId, TravelerUpdate traveler);
+        Task<ServiceResponse<bool>> DeactivateAccount(string userId);
     }
 }

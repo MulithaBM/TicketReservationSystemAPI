@@ -52,16 +52,18 @@ builder.Services.AddSwaggerGen(
 
 builder.Services.AddAutoMapper(typeof(Program).Assembly);
 
-// Admin services
+// Back-Office services
 builder.Services.AddSingleton<IAdminService, AdminService>();
 builder.Services.AddSingleton<IAdminTravelerService, AdminTravelerService>();
 builder.Services.AddSingleton<IAdminTrainService, AdminTrainService>();
 builder.Services.AddSingleton<IAdminReservationService, AdminReservationService>();
 
+// Travel agent services
 builder.Services.AddSingleton<IAgentService, AgentService>();
 
-
+// Traveler services
 builder.Services.AddSingleton<ITravelerService, TravelerService>();
+builder.Services.AddSingleton<ITravelerTrainService, TravelerTrainService>();
 
 string token = builder.Configuration["AppSettings:Token"] ?? throw new NullReferenceException("Missing token");
 

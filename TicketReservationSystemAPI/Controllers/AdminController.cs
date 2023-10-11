@@ -152,7 +152,6 @@ namespace TicketReservationSystemAPI.Controllers
             return Ok(response);
         }
 
-
         // Traveler endpoints
 
         [HttpPost("traveler/account")]
@@ -232,7 +231,6 @@ namespace TicketReservationSystemAPI.Controllers
 
             return Ok(response);
         }
-
 
         // Train endpoints
 
@@ -327,9 +325,9 @@ namespace TicketReservationSystemAPI.Controllers
         [HttpPut("train/{id}/cancel")]
         public async Task<ActionResult<ServiceResponse<string>>> CancelTrain(
             string id,
-            [FromBody] string date)
+            [FromBody] AdminCancelTrain data)
         {
-            ServiceResponse<string> response = await _adminTrainService.CancelTrain(id, date);
+            ServiceResponse<string> response = await _adminTrainService.CancelTrain(id, data);
 
             if (!response.Success)
             {
@@ -338,7 +336,6 @@ namespace TicketReservationSystemAPI.Controllers
 
             return Ok(response);
         }
-
 
         // Train schedule endpoints
 

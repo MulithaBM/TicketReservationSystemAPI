@@ -112,6 +112,7 @@ namespace TicketReservationSystemAPI.Services.AdminService
             List<Reservation> reservations = await _context.Reservations
                 .Find(filter)
                 .SortBy(x => x.ReservationDate)
+                .ThenBy(x => x.DepartureTime)
                 .ToListAsync();
 
             List<AdminGetReservation> adminGetReservations = _mapper.Map<List<AdminGetReservation>>(reservations);

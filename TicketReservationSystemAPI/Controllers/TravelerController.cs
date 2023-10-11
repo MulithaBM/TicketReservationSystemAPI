@@ -11,21 +11,26 @@ using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 using TicketReservationSystemAPI.Models;
 using TicketReservationSystemAPI.Models.Other;
+using TicketReservationSystemAPI.Models.Other.Traveler;
 using TicketReservationSystemAPI.Services.TravelerService;
 
 namespace TicketReservationSystemAPI.Controllers
 {
+    [Authorize(Roles = "Traveler")]
     [ApiController]
     [Route("api/[controller]")]
     public class TravelerController : ControllerBase
     {
         private readonly ITravelerService _travelerService;
+        private readonly ITravelerTrainService _travelerTrainService;
 
-        public TravelerController(ITravelerService travelerService)
+        public TravelerController(ITravelerService travelerService, ITravelerTrainService travelerTrainService)
         {
             _travelerService = travelerService;
+            _travelerTrainService = travelerTrainService;
         }
 
+        [AllowAnonymous]
         [HttpPost("login")]
         public async Task<ActionResult<ServiceResponse<string>>> Login([FromBody] TravelerLogin data)
         {
@@ -39,10 +44,11 @@ namespace TicketReservationSystemAPI.Controllers
             return Ok(response);
         }
 
+        [AllowAnonymous]
         [HttpPost("register")]
-        public async Task<ActionResult<ServiceResponse<int>>> Register([FromBody] TravelerRegistration data)
+        public async Task<ActionResult<ServiceResponse<string>>> Register([FromBody] TravelerRegistration data)
         {
-            ServiceResponse<int> response = await _travelerService.Register(data);
+            ServiceResponse<string> response = await _travelerService.Register(data);
 
             if (!response.Success)
             {
@@ -52,13 +58,12 @@ namespace TicketReservationSystemAPI.Controllers
             return Ok(response);
         }
 
-        [Authorize(Roles = "Traveler")]
         [HttpGet("account")]
-        public async Task<ActionResult<ServiceResponse<Traveler>>> GetAccount()
+        public async Task<ActionResult<ServiceResponse<TravelerReturn>>> GetAccount()
         {
             string userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
-            ServiceResponse<Traveler> response = await _travelerService.GetAccount(userId);
+            ServiceResponse<TravelerReturn> response = await _travelerService.GetAccount(userId);
 
             if (!response.Success)
             {
@@ -68,13 +73,12 @@ namespace TicketReservationSystemAPI.Controllers
             return Ok(response);
         }
 
-        [Authorize(Roles = "Traveler")]
         [HttpPut("update")]
-        public async Task<ActionResult<ServiceResponse<int>>> UpdateAccount([FromBody] TravelerUpdate data)
+        public async Task<ActionResult<ServiceResponse<string>>> UpdateAccount([FromBody] TravelerUpdate data)
         {
             string userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
-            ServiceResponse<int> response = await _travelerService.UpdateAccount(userId, data);
+            ServiceResponse<string> response = await _travelerService.UpdateAccount(userId, data);
 
             if (!response.Success)
             {
@@ -84,13 +88,56 @@ namespace TicketReservationSystemAPI.Controllers
             return Ok(response);
         }
 
-        [Authorize(Roles = "Traveler")]
         [HttpPut("deactivate")]
-        public async Task<ActionResult<ServiceResponse<int>>> DeactivateAccount()
+        public async Task<ActionResult<ServiceResponse<bool>>> DeactivateAccount()
         {
             string userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
-            ServiceResponse<int> response = await _travelerService.DeactivateAccount(userId);
+            ServiceResponse<bool> response = await _travelerService.DeactivateAccount(userId);
+
+            if (!response.Success)
+            {
+                return BadRequest(response);
+            }
+
+            return Ok(response);
+        }
+
+        // Train endpoints
+
+        [HttpGet("trains")]
+        public async Task<ActionResult<ServiceResponse<List<TravelerGetTrain>>>> GetTrains(
+            [FromQuery] string? departureStation, 
+            [FromQuery] string? arrivalStation, 
+            [FromQuery] string? date)
+        {
+            ServiceResponse<List<TravelerGetTrain>> response = await _travelerTrainService.GetTrains(departureStation, arrivalStation, date);
+
+            if (!response.Success)
+            {
+                return BadRequest(response);
+            }
+
+            return Ok(response);
+        }
+
+        [HttpGet("train/{id}")]
+        public async Task<ActionResult<ServiceResponse<TravelerGetTrainWithSchedules>>> GetTrain(string id)
+        {
+            ServiceResponse<TravelerGetTrainWithSchedules> response = await _travelerTrainService.GetTrain(id);
+
+            if (!response.Success)
+            {
+                return BadRequest(response);
+            }
+
+            return Ok(response);
+        }
+
+        [HttpGet("train/schedule/{id}")]
+        public async Task<ActionResult<ServiceResponse<TravelerGetTrainSchedule>>> GetSchedule(string id)
+        {
+            ServiceResponse<TravelerGetTrainSchedule> response = await _travelerTrainService.GetSchedule(id);
 
             if (!response.Success)
             {

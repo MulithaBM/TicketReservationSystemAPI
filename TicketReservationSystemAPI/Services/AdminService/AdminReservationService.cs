@@ -28,6 +28,13 @@ namespace TicketReservationSystemAPI.Services.AdminService
             _logger = logger;
         }
 
+        /// <summary>
+        /// Create a new reservation for travelers
+        /// </summary>
+        /// <param name="data">Create Reservation data</param>
+        /// <returns>
+        /// Reservation ID or null
+        /// </returns>
         public async Task<ServiceResponse<string>> CreateReservation(AdminCreateReservation data)
         {
             ServiceResponse<string> response = new();
@@ -104,7 +111,7 @@ namespace TicketReservationSystemAPI.Services.AdminService
                 response.Success = true;
                 response.Message = "Reservation created successfully";
 
-                _logger.LogInformation($"Reservation created successfully. Reservation ID: {reservation.Id}");
+                _logger.LogInformation($"Reservation created. Reservation ID: {reservation.Id}");
 
                 return response;
             }
@@ -115,6 +122,13 @@ namespace TicketReservationSystemAPI.Services.AdminService
             }
         }
 
+        /// <summary>
+        /// Get a reservation
+        /// </summary>
+        /// <param name="id">Reservation ID</param>
+        /// <returns>
+        /// Reservation or null
+        /// </returns>
         public async Task<ServiceResponse<AdminGetReservation>> GetReservation(string id)
         {
             ServiceResponse<AdminGetReservation> response = new();
@@ -147,6 +161,14 @@ namespace TicketReservationSystemAPI.Services.AdminService
         //    throw new NotImplementedException();
         //}
 
+        /// <summary>
+        /// Update a reservation
+        /// </summary>
+        /// <param name="id">Reservation ID</param>
+        /// <param name="data">Update Reservation data</param>
+        /// <returns>
+        /// Updated reservation or null
+        /// </returns>
         public async Task<ServiceResponse<AdminGetReservation>> UpdateReservation(string id, AdminUpdateReservation data)
         {
             ServiceResponse<AdminGetReservation> response = new();
@@ -198,7 +220,7 @@ namespace TicketReservationSystemAPI.Services.AdminService
 
                 AdminGetReservation adminGetReservation = _mapper.Map<AdminGetReservation>(reservation);
 
-                _logger.LogInformation($"Reservation updated successfully. Reservation ID: {reservation.Id}");
+                _logger.LogInformation($"Reservation updated. Reservation ID: {reservation.Id}");
 
                 response.Data = adminGetReservation;
                 response.Success = true;
@@ -211,6 +233,13 @@ namespace TicketReservationSystemAPI.Services.AdminService
             }
         }
 
+        /// <summary>
+        /// Cancel a reservation
+        /// </summary>
+        /// <param name="id">Reservation ID</param>
+        /// <returns>
+        /// Reservation ID or null
+        /// </returns>
         public async Task<ServiceResponse<string>> CancelReservation(string id)
         {
             ServiceResponse<string> response = new();
@@ -253,7 +282,7 @@ namespace TicketReservationSystemAPI.Services.AdminService
 
                 await _context.Travelers.ReplaceOneAsync(t => t.NIC == traveler.NIC, traveler);
 
-                _logger.LogInformation($"Reservation cancelled successfully. Reservation ID: {reservation.Id}");
+                _logger.LogInformation($"Reservation cancelled. Reservation ID: {reservation.Id}");
 
                 response.Data = reservation.Id.ToString();
                 response.Success = true;
@@ -267,6 +296,15 @@ namespace TicketReservationSystemAPI.Services.AdminService
             }
         }
 
+        /// <summary>
+        /// Helper method to create error response
+        /// </summary>
+        /// <typeparam name="T">Response.Data type</typeparam>
+        /// <param name="response">Response</param>
+        /// <param name="message">Error message</param>
+        /// <returns>
+        /// Response with error message
+        /// </returns>
         private static ServiceResponse<T> CreateErrorResponse<T>(ServiceResponse<T> response, string message)
         {
             response.Success = false;

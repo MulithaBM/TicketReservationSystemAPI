@@ -9,6 +9,7 @@
 using AutoMapper;
 using TicketReservationSystemAPI.Models;
 using TicketReservationSystemAPI.Models.Other.Admin;
+using TicketReservationSystemAPI.Models.Other.Traveler;
 
 namespace TicketReservationSystemAPI
 {
@@ -16,6 +17,7 @@ namespace TicketReservationSystemAPI
     {
         public AutoMapperProfile()
         {
+            // Admin
             CreateMap<Admin, AdminReturn>();
             CreateMap<Traveler, AdminGetTraveler>();
             CreateMap<Train, AdminGetTrain>();
@@ -23,6 +25,13 @@ namespace TicketReservationSystemAPI
             CreateMap<TrainSchedule, AdminGetTrainSchedule>();
             CreateMap<Traveler, AdminGetTravelerWithReservations>();
             CreateMap<Reservation, AdminGetReservation>();
+
+            // Traveler
+            CreateMap<Reservation, TravelerGetReservation>();
+            CreateMap<Traveler, TravelerReturn>();
+            CreateMap<Train, TravelerGetTrain>();
+            CreateMap<Train, TravelerGetTrainWithSchedules>();
+            CreateMap<TrainSchedule, TravelerGetTrainSchedule>();
         }
     }
 }
