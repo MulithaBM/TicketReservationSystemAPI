@@ -10,7 +10,7 @@ using MongoDB.Bson;
 
 namespace TicketReservationSystemAPI.Models.Other.Admin
 {
-    public class AdminTravelerReturn
+    public class AdminGetTraveler
     {
         public string NIC { get; set; }
         public string Name { get; set; }

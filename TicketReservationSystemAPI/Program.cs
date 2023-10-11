@@ -1,3 +1,11 @@
+// File name: Program.cs
+// <summary>
+// Description: A brief description of the file's purpose.
+// </summary>
+// <author>MulithaBM</author>
+// <created>22/09/2023</created>
+// <modified>11/10/2023</modified>
+
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
@@ -48,6 +56,7 @@ builder.Services.AddAutoMapper(typeof(Program).Assembly);
 builder.Services.AddSingleton<IAdminService, AdminService>();
 builder.Services.AddSingleton<IAdminTravelerService, AdminTravelerService>();
 builder.Services.AddSingleton<IAdminTrainService, AdminTrainService>();
+builder.Services.AddSingleton<IAdminReservationService, AdminReservationService>();
 
 builder.Services.AddSingleton<IAgentService, AgentService>();
 

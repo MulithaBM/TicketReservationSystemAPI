@@ -1,4 +1,12 @@
-﻿using Microsoft.IdentityModel.Tokens;
+﻿// File name: AgentService.cs
+// <summary>
+// Description: A brief description of the file's purpose.
+// </summary>
+// <author>MulithaBM</author>
+// <created>11/10/2023</created>
+// <modified>11/10/2023</modified>
+
+using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;

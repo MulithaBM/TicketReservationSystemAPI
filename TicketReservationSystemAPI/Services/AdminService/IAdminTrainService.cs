@@ -1,4 +1,12 @@
-﻿using TicketReservationSystemAPI.Models;
+﻿// File name: IAdminTrainService.cs
+// <summary>
+// Description: A brief description of the file's purpose.
+// </summary>
+// <author>MulithaBM</author>
+// <created>11/10/2023</created>
+// <modified>11/10/2023</modified>
+
+using TicketReservationSystemAPI.Models;
 using TicketReservationSystemAPI.Models.Other;
 using TicketReservationSystemAPI.Models.Other.Admin;
 
@@ -7,7 +15,7 @@ namespace TicketReservationSystemAPI.Services.AdminService
     public interface IAdminTrainService
     {
         Task<ServiceResponse<string>> CreateTrain(AdminCreateTrain data);
-        Task<ServiceResponse<List<AdminGetTrain>>> GetTrains(bool activeStatus = true, bool publishStatus = true, string? departureStation = null, string? arrivalStation = null);
+        Task<ServiceResponse<List<AdminGetTrain>>> GetTrains(bool activeStatus, bool publishStatus, string? departureStation, string? arrivalStation);
         Task<ServiceResponse<AdminGetTrainWithSchedules>> GetTrain(string id);
         // Task<ServiceResponse<string>> UpdateTrain(AdminUpdateTrain data);
         Task<ServiceResponse<bool>> UpdateActiveStatus(string id, bool status);

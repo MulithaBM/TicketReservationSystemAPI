@@ -1,10 +1,9 @@
 ﻿// File name: AdminTrainService.cs
 // <summary>
-// Implements the <see cref="IAdminTrainService"/> interface.
-// Train service for back office staff
+// Description: A brief description of the file's purpose.
 // </summary>
 // <author>MulithaBM</author>
-// <created>09/10/2023</created>
+// <created>11/10/2023</created>
 // <modified>11/10/2023</modified>
 
 using AutoMapper;
@@ -28,6 +27,11 @@ namespace TicketReservationSystemAPI.Services.AdminService
             _mapper = mapper;
         }
 
+        /// <summary>
+        /// Create a train
+        /// </summary>
+        /// <param name="data"></param>
+        /// <returns></returns>
         public async Task<ServiceResponse<string>> CreateTrain(AdminCreateTrain data)
         {
             ServiceResponse<string> response = new();
@@ -59,10 +63,10 @@ namespace TicketReservationSystemAPI.Services.AdminService
         /// <param name="arrivalStation">(optional) Arrival station</param>
         /// <returns></returns>
         public async Task<ServiceResponse<List<AdminGetTrain>>> GetTrains(
-            bool activeStatus = true, 
-            bool publishStatus = true, 
-            string? departureStation = null, 
-            string? arrivalStation = null)
+            bool activeStatus, 
+            bool publishStatus, 
+            string? departureStation, 
+            string? arrivalStation)
         {
             ServiceResponse<List<AdminGetTrain>> response = new();
 
@@ -135,7 +139,11 @@ namespace TicketReservationSystemAPI.Services.AdminService
 
             DateOnly today = DateOnly.FromDateTime(DateTime.Now);
 
-            List<TrainSchedule> schedules = await _context.TrainSchedules.Find(x => x.TrainId == trainId && x.Date >= today).ToListAsync();
+            List<TrainSchedule> schedules = await _context.TrainSchedules
+                .Find(x => x.TrainId == trainId && x.Date >= today)
+                .SortBy(x => x.Date)
+                .ThenBy(x => x.DepartureTime)
+                .ToListAsync();
 
             trainWithSchedules.Schedules = _mapper.Map<List<AdminGetTrainSchedule>>(schedules);
 
@@ -144,7 +152,7 @@ namespace TicketReservationSystemAPI.Services.AdminService
 
             if (schedules.Count == 0)
             {
-                response.Message = "No schedules found";
+                response.Message = "No active schedules found";
             }
 
             return response;
@@ -202,7 +210,10 @@ namespace TicketReservationSystemAPI.Services.AdminService
                         await _context.TrainSchedules.DeleteManyAsync(x => schedules.Contains(x.Id));
 
                         // remove schedules IDs from train
-                        train.ScheduleIDs.RemoveAll(x => schedules.Contains(x));
+                        foreach (Guid schedule in schedules)
+                        {
+                            train.ScheduleIDs.Remove(schedule);
+                        }
                     }
                 }
 
@@ -226,6 +237,9 @@ namespace TicketReservationSystemAPI.Services.AdminService
         /// <summary>
         /// Update IsPublished property of the train
         /// </summary>
+        /// <remarks>
+        /// All the active schedules are deleted when train is unpublished
+        /// </remarks>
         /// <param name="id">Train ID</param>
         /// <param name="status">Status, true (publish) / false (unpublish)</param>
         /// <returns></returns>
@@ -257,33 +271,34 @@ namespace TicketReservationSystemAPI.Services.AdminService
             }
             else
             {
-                if (train.ScheduleIDs != null)
+                DateOnly today = DateOnly.FromDateTime(DateTime.Today);
+
+                List<Guid> schedules = await _context.TrainSchedules
+                    .Find(x => x.TrainId == trainId && x.Date >= today)
+                    .Project(x => x.Id)
+                    .ToListAsync();
+
+                if (schedules.Count > 0)
                 {
-                    DateOnly today = DateOnly.FromDateTime(DateTime.Today);
-
-                    List<Guid> schedules = await _context.TrainSchedules
-                        .Find(x => x.TrainId == trainId && x.Date >= today)
-                        .Project(x => x.Id)
-                        .ToListAsync();
-
-                    if (schedules.Count > 0)
+                    bool schedulesWithReservations = schedules.Any(scheduleId =>
                     {
-                        bool schedulesWithReservations = schedules.Any(scheduleId =>
-                        {
-                            TrainSchedule schedule = _context.TrainSchedules.Find(x => x.Id == scheduleId).FirstOrDefault();
-                            return schedule != null && schedule.ReservationIDs != null && schedule.ReservationIDs.Any();
-                        });
+                        TrainSchedule schedule = _context.TrainSchedules.Find(x => x.Id == scheduleId).FirstOrDefault();
+                        return schedule != null && schedule.ReservationIDs.Any();
+                    });
 
-                        if (schedulesWithReservations)
-                        {
-                            response.Success = false;
-                            response.Message = "Cannot unpublish train with active reservations";
-                            return response;
-                        }
+                    if (schedulesWithReservations)
+                    {
+                        response.Success = false;
+                        response.Message = "Cannot unpublish train with active reservations";
+                        return response;
+                    }
 
-                        await _context.TrainSchedules.DeleteManyAsync(x => schedules.Contains(x.Id));
+                    // Remove all the active schedules
+                    await _context.TrainSchedules.DeleteManyAsync(x => schedules.Contains(x.Id));
 
-                        train.ScheduleIDs.RemoveAll(x => schedules.Contains(x));
+                    foreach (Guid schedule in schedules)
+                    {
+                        train.ScheduleIDs.Remove(schedule);
                     }
                 }
 
@@ -323,33 +338,33 @@ namespace TicketReservationSystemAPI.Services.AdminService
                 return response;
             }
 
-            if (train.ScheduleIDs != null)
+            DateOnly scheduleDate = DateOnly.FromDateTime(DateTime.Parse(date));
+
+            List<Guid> schedules = await _context.TrainSchedules
+                .Find(x => x.TrainId == trainId && x.Date == scheduleDate)
+                .Project(x => x.Id)
+                .ToListAsync();
+
+            if (schedules.Count > 0)
             {
-                DateOnly scheduleDate = DateOnly.FromDateTime(DateTime.Parse(date));
-
-                List<Guid> schedules = await _context.TrainSchedules
-                    .Find(x => x.TrainId == trainId && x.Date == scheduleDate)
-                    .Project(x => x.Id)
-                    .ToListAsync();
-
-                if (schedules.Count > 0)
+                bool schedulesWithReservations = schedules.Any(scheduleId =>
                 {
-                    bool schedulesWithReservations = schedules.Any(scheduleId =>
-                    {
-                        TrainSchedule schedule = _context.TrainSchedules.Find(x => x.Id == scheduleId).FirstOrDefault();
-                        return schedule != null && schedule.ReservationIDs != null && schedule.ReservationIDs.Any();
-                    });
+                    TrainSchedule schedule = _context.TrainSchedules.Find(x => x.Id == scheduleId).FirstOrDefault();
+                    return schedule != null && schedule.ReservationIDs.Any();
+                });
 
-                    if (schedulesWithReservations)
-                    {
-                        response.Success = false;
-                        response.Message = "Cannot cancel train with reservations";
-                        return response;
-                    }
+                if (schedulesWithReservations)
+                {
+                    response.Success = false;
+                    response.Message = "Cannot cancel train with reservations";
+                    return response;
+                }
 
-                    await _context.TrainSchedules.DeleteManyAsync(x => schedules.Contains(x.Id));
+                await _context.TrainSchedules.DeleteManyAsync(x => schedules.Contains(x.Id));
 
-                    train.ScheduleIDs.RemoveAll(x => schedules.Contains(x));
+                foreach (Guid schedule in schedules)
+                {
+                    train.ScheduleIDs.Remove(schedule);
                 }
             }
 
@@ -362,7 +377,10 @@ namespace TicketReservationSystemAPI.Services.AdminService
         /// <summary>
         /// Add a new schedule to a train
         /// </summary>
-        /// <param name="data">Train data of type AdminAddSchedule</param>
+        /// <remarks>
+        /// Unpublished trains become published automatically when a schedule is added
+        /// </remarks>
+        /// <param name="data">Schedule data</param>
         /// <returns>ID of the created schedule</returns>
         public async Task<ServiceResponse<string>> AddSchedule(AdminAddSchedule data)
         {
@@ -393,9 +411,12 @@ namespace TicketReservationSystemAPI.Services.AdminService
 
             await _context.TrainSchedules.InsertOneAsync(schedule);
 
-            train.ScheduleIDs ??= new List<Guid>();
-
             train.ScheduleIDs.Add(schedule.Id);
+
+            if (!train.IsPublished)
+            {
+                train.IsPublished = true;
+            }
 
             await _context.Trains.ReplaceOneAsync(x => x.Id == trainId, train);
 
@@ -410,7 +431,7 @@ namespace TicketReservationSystemAPI.Services.AdminService
         /// Get a single train schedule using schedule ID
         /// </summary>
         /// <param name="id">schedule ID</param>
-        /// <returns>Train schedule of type AdminGetTrainSchedule</returns>
+        /// <returns>Train schedule</returns>
         public async Task<ServiceResponse<AdminGetTrainSchedule>> GetSchedule(string id)
         {
             ServiceResponse<AdminGetTrainSchedule> response = new();
@@ -439,8 +460,8 @@ namespace TicketReservationSystemAPI.Services.AdminService
         /// Can update only if schedule has no reservations
         /// </remarks>
         /// <param name="id">Schedule ID</param>
-        /// <param name="data">Update data</param>
-        /// <returns>Train schedule of type AdminGetTrainSchedule</returns>
+        /// <param name="data">Update schedule data</param>
+        /// <returns>Train schedule</returns>
         public async Task<ServiceResponse<AdminGetTrainSchedule>> UpdateSchedule(string id, AdminUpdateSchedule data)
         {
             ServiceResponse<AdminGetTrainSchedule> response = new();
@@ -486,6 +507,7 @@ namespace TicketReservationSystemAPI.Services.AdminService
         /// </summary>
         /// <remarks>
         /// Can delete only if schedule has no reservations
+        /// If no active schedules are present, train is unpublished automatically
         /// </remarks>
         /// <param name="id">Train ID</param>
         /// <returns></returns>
@@ -493,7 +515,7 @@ namespace TicketReservationSystemAPI.Services.AdminService
         {
             ServiceResponse<string> response = new();
 
-            Guid scheduleId = new(id);
+            Guid scheduleId = Guid.Parse(id);
 
             TrainSchedule schedule = await _context.TrainSchedules.Find(x => x.Id == scheduleId).FirstOrDefaultAsync();
 
@@ -505,7 +527,7 @@ namespace TicketReservationSystemAPI.Services.AdminService
             }
 
             // check if the schedule has reservations
-            if (schedule.ReservationIDs != null && schedule.ReservationIDs.Any())
+            if (schedule.ReservationIDs.Any())
             {
                 response.Success = false;
                 response.Message = "Cannot delete schedule with active reservations";
@@ -516,9 +538,23 @@ namespace TicketReservationSystemAPI.Services.AdminService
 
             Train train = await _context.Trains.Find(x => x.Id == schedule.TrainId).FirstOrDefaultAsync();
 
-            if (train != null && train.ScheduleIDs != null)
+            if (train != null)
             {
                 train.ScheduleIDs.Remove(scheduleId);
+
+                DateTime current = DateTime.Now;
+                DateOnly currentDate = DateOnly.FromDateTime(current);
+                TimeOnly currentTime = TimeOnly.FromDateTime(current);
+
+                List<TrainSchedule> activeSchedules = await _context.TrainSchedules
+                    .Find(s => s.TrainId == train.Id && s.Date >= currentDate && s.DepartureTime >= currentTime)
+                    .ToListAsync();
+
+                if (activeSchedules.Count == 0)
+                {
+                    train.IsPublished = false;
+                }
+
                 await _context.Trains.ReplaceOneAsync(x => x.Id == train.Id, train);
             }
 

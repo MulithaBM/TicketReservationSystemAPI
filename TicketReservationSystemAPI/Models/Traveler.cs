@@ -21,6 +21,6 @@ namespace TicketReservationSystemAPI.Models
         public byte[] PasswordHash { get; set; }
         public byte[] PasswordSalt { get; set; }
         public bool IsActive { get; set; }
-        public IEnumerable<Guid>? ReservationIDs { get; set; }
+        public IList<Guid> ReservationIDs { get; set; } = new List<Guid>();
     }
 }
