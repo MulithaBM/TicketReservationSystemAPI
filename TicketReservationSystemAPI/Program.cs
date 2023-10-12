@@ -64,6 +64,7 @@ builder.Services.AddSingleton<IAgentService, AgentService>();
 // Traveler services
 builder.Services.AddSingleton<ITravelerService, TravelerService>();
 builder.Services.AddSingleton<ITravelerTrainService, TravelerTrainService>();
+builder.Services.AddSingleton<ITravelerReservationService, TravelerReservationService>();
 
 string token = builder.Configuration["AppSettings:Token"] ?? throw new NullReferenceException("Missing token");
 

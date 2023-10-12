@@ -8,6 +8,5 @@
         public string ReservationDate { get; set; }
         public string DepartureTime { get; set; }
         public string ArrivalTime { get; set; }
-        public bool IsCancelled { get; set; } = false;
     }
 }

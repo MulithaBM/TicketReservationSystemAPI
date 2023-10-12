@@ -1,56 +1,54 @@
-﻿// File name: AdminReservationService.cs
+﻿// File name: TravelerReservationService.cs
 // <summary>
-// Description: A brief description of the file's purpose.
+// Description: Service class for traveler's reservation related operations
 // </summary>
 // <author>MulithaBM</author>
-// <created>11/10/2023</created>
-// <modified>11/10/2023</modified>
+// <created>12/10/2023</created>
+// <modified>12/10/2023</modified>
 
 using AutoMapper;
 using MongoDB.Driver;
 using TicketReservationSystemAPI.Data;
 using TicketReservationSystemAPI.Models;
 using TicketReservationSystemAPI.Models.Other;
-using TicketReservationSystemAPI.Models.Other.Admin;
+using TicketReservationSystemAPI.Models.Other.Traveler;
 
-namespace TicketReservationSystemAPI.Services.AdminService
+namespace TicketReservationSystemAPI.Services.TravelerService
 {
-    public class AdminReservationService : IAdminReservationService
+    public class TravelerReservationService : ITravelerReservationService
     {
         private readonly DataContext _context;
         private readonly IMapper _mapper;
-        private readonly ILogger<AdminReservationService> _logger;
+        private readonly ILogger<TravelerReservationService> _logger;
 
-        public AdminReservationService(DataContext context, IMapper mapper, ILogger<AdminReservationService> logger)
+        public TravelerReservationService(DataContext context, IMapper mapper,
+            ILogger<TravelerReservationService> logger)
         {
             _context = context;
             _mapper = mapper;
             _logger = logger;
         }
 
-        /// <summary>
-        /// Create a new reservation for travelers
-        /// </summary>
-        /// <param name="data">Create Reservation data</param>
-        /// <returns>
-        /// Reservation ID or null
-        /// </returns>
-        public async Task<ServiceResponse<string>> CreateReservation(AdminCreateReservation data)
+        public async Task<ServiceResponse<string>> CreateReservation(string nic, TravelerCreateReservation data)
         {
             ServiceResponse<string> response = new();
 
             try
             {
-                Traveler traveler = await _context.Travelers.Find(t => t.NIC == data.NIC).FirstOrDefaultAsync();
+                Traveler traveler = await _context.Travelers
+                    .Find(t => t.NIC == nic)
+                    .FirstOrDefaultAsync();
 
-                if (traveler == null) 
+                if (traveler == null)
                     return CreateErrorResponse(response, "Traveler not found");
 
                 Guid scheduleId = new(data.ScheduleId);
 
-                TrainSchedule schedule = await _context.TrainSchedules.Find(s => s.Id == scheduleId).FirstOrDefaultAsync();
+                TrainSchedule schedule = await _context.TrainSchedules
+                    .Find(s => s.Id == scheduleId).
+                    FirstOrDefaultAsync();
 
-                if (schedule == null) 
+                if (schedule == null)
                     return CreateErrorResponse(response, "Schedule not found");
 
                 DateTime current = DateTime.Now;
@@ -58,33 +56,31 @@ namespace TicketReservationSystemAPI.Services.AdminService
                 TimeOnly currentTime = TimeOnly.FromDateTime(current);
 
                 // Check if reservation date within 30 days of the booking date
-                if (currentDate.AddDays(30) < schedule.Date) 
+                if (currentDate.AddDays(30) < schedule.Date)
                     return CreateErrorResponse(response, "Reservation can be created only within 30 days of the scheduled date");
 
                 // Check if schedule date has passed
-                if (schedule.Date < currentDate) 
+                if (schedule.Date < currentDate)
                     return CreateErrorResponse(response, "Schedule date has passed");
 
                 // Check if schedule time has passed
-                if (schedule.Date == currentDate && schedule.DepartureTime <= currentTime) 
+                if (schedule.Date == currentDate && schedule.DepartureTime <= currentTime)
                     return CreateErrorResponse(response, "Schedule time has passed");
 
                 // Check if seat number is valid
-                if (data.Seats < 1 || data.Seats > 4) 
+                if (data.Seats < 1 || data.Seats > 4)
                     return CreateErrorResponse(response, "Seat number must be from 1 t0 4");
 
-                Train train = await _context.Trains.Find(t => t.Id == schedule.TrainId).FirstOrDefaultAsync();
+                Train train = await _context.Trains
+                    .Find(t => t.Id == schedule.TrainId)
+                    .FirstOrDefaultAsync();
 
-                if (train == null) 
+                if (train == null)
                     return CreateErrorResponse(response, "Train not found");
-
-                // Check if enough seats are available for reservation
-                if (data.Seats > schedule.AvailableSeats)
-                    return CreateErrorResponse(response, $"Only {schedule.AvailableSeats} are available");
 
                 Reservation reservation = new()
                 {
-                    TravelerId = traveler.NIC,
+                    TravelerId = nic,
                     TrainId = schedule.TrainId,
                     ScheduleId = schedule.Id,
                     Seats = data.Seats,
@@ -117,61 +113,101 @@ namespace TicketReservationSystemAPI.Services.AdminService
             }
             catch (Exception e)
             {
-                _logger.LogError(e, e.Message);
-                return CreateErrorResponse(response, "Internal server error");
+                _logger.LogError(e.Message);
+                return CreateErrorResponse(response, "Error occurred while creating the reservation");
             }
         }
 
-        /// <summary>
-        /// Get a reservation
-        /// </summary>
-        /// <param name="id">Reservation ID</param>
-        /// <returns>
-        /// Reservation or null
-        /// </returns>
-        public async Task<ServiceResponse<AdminGetReservation>> GetReservation(string id)
+        public async Task<ServiceResponse<List<TravelerGetReservation>>> GetReservations(string nic, bool past)
         {
-            ServiceResponse<AdminGetReservation> response = new();
+            ServiceResponse<List<TravelerGetReservation>> response = new();
 
             try
             {
-                Guid reservationId = new(id);
+                var filterBuilder = Builders<Reservation>.Filter;
+                var filter = filterBuilder.Eq(r => r.TravelerId, nic);
 
-                Reservation reservation = await _context.Reservations.Find(r => r.Id == reservationId).FirstOrDefaultAsync();
+                DateTime current = DateTime.Now;
+                DateOnly currentDate = DateOnly.FromDateTime(current);
+                TimeOnly currentTime = TimeOnly.FromDateTime(current);
 
-                if (reservation == null)
-                    return CreateErrorResponse(response, "Reservation not found");
+                List<Reservation> reservations;
 
-                AdminGetReservation adminGetReservation = _mapper.Map<AdminGetReservation>(reservation);
+                if (past)
+                {
+                    filter &= filterBuilder.Eq(r => r.ReservationDate, currentDate);
+                    filter &= filterBuilder.Lt(r => r.DepartureTime, currentTime);
 
-                response.Data = adminGetReservation;
+                    filter |= filterBuilder.Lt(r => r.ReservationDate, currentDate);
+
+                    reservations = await _context.Reservations
+                        .Find(filter)
+                        .SortByDescending(r => r.ReservationDate)
+                        .ThenByDescending(r => r.DepartureTime)
+                        .ToListAsync();
+                }
+                else
+                {
+                    filter &= filterBuilder.Eq(r => r.ReservationDate, currentDate);
+                    filter &= filterBuilder.Gte(r => r.DepartureTime, currentTime);
+
+                    filter|= filterBuilder.Gt(r => r.ReservationDate, currentDate);
+
+                    reservations = await _context.Reservations
+                        .Find(filter)
+                        .SortBy(r => r.ReservationDate)
+                        .ThenBy(r => r.DepartureTime)
+                        .ToListAsync();
+                }
+
+                List<TravelerGetReservation> data = _mapper.Map<List<TravelerGetReservation>>(reservations);
+
+                response.Data = data;
                 response.Success = true;
+                response.Message = "Reservations retrieved successfully";
 
                 return response;
             }
             catch (Exception e)
             {
-                _logger.LogError(e, e.Message);
-                return CreateErrorResponse(response, "Internal server error");
+                _logger.LogError(e.Message);
+                return CreateErrorResponse(response, "Error occurred while retrieving the reservations");
             }
         }
 
-        //public Task<ServiceResponse<List<AdminGetReservation>>> GetReservations(string? userId = null, string? trainId = null, string? date = null)
-        //{
-        //    throw new NotImplementedException();
-        //}
-
-        /// <summary>
-        /// Update a reservation
-        /// </summary>
-        /// <param name="id">Reservation ID</param>
-        /// <param name="data">Update Reservation data</param>
-        /// <returns>
-        /// Updated reservation or null
-        /// </returns>
-        public async Task<ServiceResponse<AdminGetReservation>> UpdateReservation(string id, AdminUpdateReservation data)
+        public async Task<ServiceResponse<TravelerGetReservation>> GetReservation(string id)
         {
-            ServiceResponse<AdminGetReservation> response = new();
+            ServiceResponse<TravelerGetReservation> response = new();
+
+            try
+            {
+                Guid reservationId = new(id);
+
+                Reservation reservation = await _context.Reservations
+                    .Find(r => r.Id == reservationId)
+                    .FirstOrDefaultAsync();
+
+                if (reservation == null)
+                    return CreateErrorResponse(response, "Reservation not found");
+
+                TravelerGetReservation data = _mapper.Map<TravelerGetReservation>(reservation);
+
+                response.Data = data;
+                response.Success = true;
+                response.Message = "Reservation retrieved successfully";
+
+                return response;
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e.Message);
+                return CreateErrorResponse(response, "Error occurred while retrieving the reservation");
+            }
+        }
+
+        public async Task<ServiceResponse<TravelerGetReservation>> UpdateReservation(string id, TravelerUpdateReservation data)
+        {
+            ServiceResponse<TravelerGetReservation> response = new();
 
             try
             {
@@ -194,7 +230,7 @@ namespace TicketReservationSystemAPI.Services.AdminService
 
                     // Check if the reservation time has passed
                     if (reservation.DepartureTime < currentTime)
-                        return CreateErrorResponse(response, "Reservation has passed");
+                        return CreateErrorResponse(response, "Reservation time has passed");
                 }
 
                 // Check if the update is made at least 5 days prior to the reservation date
@@ -231,28 +267,23 @@ namespace TicketReservationSystemAPI.Services.AdminService
                     await _context.TrainSchedules.ReplaceOneAsync(s => s.Id == schedule.Id, schedule);
                 }
 
-                AdminGetReservation adminGetReservation = _mapper.Map<AdminGetReservation>(reservation);
+                TravelerGetReservation travelerGetReservation = _mapper.Map<TravelerGetReservation>(reservation);
 
                 _logger.LogInformation($"Reservation updated. Reservation ID: {reservation.Id}");
 
-                response.Data = adminGetReservation;
+                response.Data = travelerGetReservation;
                 response.Success = true;
+                response.Message = "Reservation updated successfully";
+
                 return response;
             }
             catch (Exception e)
             {
                 _logger.LogError(e, e.Message);
-                return CreateErrorResponse(response, "Internal server error");
+                return CreateErrorResponse(response, "Error occurred while updating the reservation");
             }
         }
 
-        /// <summary>
-        /// Cancel a reservation
-        /// </summary>
-        /// <param name="id">Reservation ID</param>
-        /// <returns>
-        /// Reservation ID or null
-        /// </returns>
         public async Task<ServiceResponse<string>> CancelReservation(string id)
         {
             ServiceResponse<string> response = new();
@@ -261,9 +292,8 @@ namespace TicketReservationSystemAPI.Services.AdminService
             {
                 Guid reservationId = new(id);
 
-                Reservation reservation = await _context.Reservations
-                        .Find(r => r.Id == reservationId)
-                        .FirstOrDefaultAsync();
+                Reservation reservation =
+                    await _context.Reservations.Find(r => r.Id == reservationId).FirstOrDefaultAsync();
 
                 if (reservation == null)
                     return CreateErrorResponse(response, "Reservation not found");
@@ -316,24 +346,16 @@ namespace TicketReservationSystemAPI.Services.AdminService
                 response.Data = reservation.Id.ToString();
                 response.Success = true;
                 response.Message = "Reservation cancelled successfully";
+
                 return response;
             }
             catch (Exception e)
             {
                 _logger.LogError(e, e.Message);
-                return CreateErrorResponse(response, "Error cancelling the reservation");
+                return CreateErrorResponse(response, "Error occurred while cancelling the reservation");
             }
         }
 
-        /// <summary>
-        /// Helper method to create error response
-        /// </summary>
-        /// <typeparam name="T">Response.Data type</typeparam>
-        /// <param name="response">Response</param>
-        /// <param name="message">Error message</param>
-        /// <returns>
-        /// Response with error message
-        /// </returns>
         private static ServiceResponse<T> CreateErrorResponse<T>(ServiceResponse<T> response, string message)
         {
             response.Success = false;

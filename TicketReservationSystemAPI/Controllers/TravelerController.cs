@@ -23,11 +23,16 @@ namespace TicketReservationSystemAPI.Controllers
     {
         private readonly ITravelerService _travelerService;
         private readonly ITravelerTrainService _travelerTrainService;
+        private readonly ITravelerReservationService _travelerReservationService;
 
-        public TravelerController(ITravelerService travelerService, ITravelerTrainService travelerTrainService)
+        public TravelerController(
+            ITravelerService travelerService, 
+            ITravelerTrainService travelerTrainService, 
+            ITravelerReservationService travelerReservationService)
         {
             _travelerService = travelerService;
             _travelerTrainService = travelerTrainService;
+            _travelerReservationService = travelerReservationService;
         }
 
         [AllowAnonymous]
@@ -138,6 +143,79 @@ namespace TicketReservationSystemAPI.Controllers
         public async Task<ActionResult<ServiceResponse<TravelerGetTrainSchedule>>> GetSchedule(string id)
         {
             ServiceResponse<TravelerGetTrainSchedule> response = await _travelerTrainService.GetSchedule(id);
+
+            if (!response.Success)
+            {
+                return BadRequest(response);
+            }
+
+            return Ok(response);
+        }
+
+        // Reservation endpoints
+
+        [HttpPost("reservation")]
+        public async Task<ActionResult<ServiceResponse<string>>> CreateReservation([FromBody] TravelerCreateReservation data)
+        {
+            string nic = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            ServiceResponse<string> response = await _travelerReservationService.CreateReservation(nic, data);
+
+            if (!response.Success)
+            {
+                return BadRequest(response);
+            }
+
+            return Ok(response);
+        }
+
+        [HttpGet("reservations")]
+        public async Task<ActionResult<ServiceResponse<List<TravelerGetReservation>>>> GetReservations([FromQuery] bool past = false)
+        {
+            string nic = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            ServiceResponse<List<TravelerGetReservation>> response = await _travelerReservationService.GetReservations(nic, past);
+
+            if (!response.Success)
+            {
+                return BadRequest(response);
+            }
+
+            return Ok(response);
+        }
+
+        [HttpGet("reservation/{id}")]
+        public async Task<ActionResult<ServiceResponse<TravelerGetReservation>>> GetReservation(string id)
+        {
+            ServiceResponse<TravelerGetReservation> response = await _travelerReservationService.GetReservation(id);
+
+            if (!response.Success)
+            {
+                return BadRequest(response);
+            }
+
+            return Ok(response);
+        }
+
+        [HttpPut("reservation/{id}")]
+        public async Task<ActionResult<ServiceResponse<TravelerGetReservation>>> UpdateReservation(
+            string id,
+            [FromBody] TravelerUpdateReservation data)
+        {
+            ServiceResponse<TravelerGetReservation> response = await _travelerReservationService.UpdateReservation(id, data);
+
+            if (!response.Success)
+            {
+                return BadRequest(response);
+            }
+
+            return Ok(response);
+        }
+
+        [HttpPut("reservation/{id}/cancel")]
+        public async Task<ActionResult<ServiceResponse<string>>> CancelReservation(string id)
+        {
+            ServiceResponse<string> response = await _travelerReservationService.CancelReservation(id);
 
             if (!response.Success)
             {
