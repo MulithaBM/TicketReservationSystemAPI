@@ -1,8 +1,8 @@
 // File name: Program.cs
 // <summary>
-// Description: A brief description of the file's purpose.
+// Description: Start up file for the web API
 // </summary>
-// <author>MulithaBM</author>
+// <author> MulithaBM </author>
 // <created>22/09/2023</created>
 // <modified>11/10/2023</modified>
 
@@ -20,6 +20,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Configuration.AddUserSecrets<Program>();
 
+// Configure the database settings
 builder.Services.Configure<DbSettings>(
     builder.Configuration.GetSection("MongoDbSettings"));
 
@@ -102,8 +103,6 @@ app.UseHttpsRedirection();
 
 app.UseAuthentication();
 app.UseAuthorization();
-
-//app.UseMiddleware<UserIdMiddleware>();
 
 app.MapControllers();
 

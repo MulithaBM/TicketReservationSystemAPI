@@ -1,10 +1,16 @@
-﻿using TicketReservationSystemAPI.Models.Enums;
+﻿// File name: TravelerGetTrain.cs
+// <summary>
+// Description: Data transfer model to get train, for traveler.
+// </summary>
+// <author> MulithaBM </author>
+// <created>12/10/2023</created>
+// <modified>13/10/2023</modified>
 
 namespace TicketReservationSystemAPI.Models.Other.Traveler
 {
     public class TravelerGetTrain
     {
-        public string Id { get; set; }
+        public Guid Id { get; set; }
         public string Name { get; set; }
         public String Type { get; set; }
         public int Seats { get; set; }

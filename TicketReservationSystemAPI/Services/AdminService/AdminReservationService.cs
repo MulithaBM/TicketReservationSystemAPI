@@ -1,8 +1,8 @@
 ﻿// File name: AdminReservationService.cs
 // <summary>
-// Description: A brief description of the file's purpose.
+// Description: Service class for admin reservation related operations.
 // </summary>
-// <author>MulithaBM</author>
+// <author> MulithaBM </author>
 // <created>11/10/2023</created>
 // <modified>11/10/2023</modified>
 
@@ -21,7 +21,10 @@ namespace TicketReservationSystemAPI.Services.AdminService
         private readonly IMapper _mapper;
         private readonly ILogger<AdminReservationService> _logger;
 
-        public AdminReservationService(DataContext context, IMapper mapper, ILogger<AdminReservationService> logger)
+        public AdminReservationService(
+            DataContext context, 
+            IMapper mapper, 
+            ILogger<AdminReservationService> logger)
         {
             _context = context;
             _mapper = mapper;
@@ -33,7 +36,7 @@ namespace TicketReservationSystemAPI.Services.AdminService
         /// </summary>
         /// <param name="data">Create Reservation data</param>
         /// <returns>
-        /// Reservation ID or null
+        /// <see cref="ServiceResponse{T}"/> with reservation ID or null
         /// </returns>
         public async Task<ServiceResponse<string>> CreateReservation(AdminCreateReservation data)
         {
@@ -41,14 +44,18 @@ namespace TicketReservationSystemAPI.Services.AdminService
 
             try
             {
-                Traveler traveler = await _context.Travelers.Find(t => t.NIC == data.NIC).FirstOrDefaultAsync();
+                Traveler traveler = await _context.Travelers
+                    .Find(t => t.NIC == data.NIC)
+                    .FirstOrDefaultAsync();
 
                 if (traveler == null) 
                     return CreateErrorResponse(response, "Traveler not found");
 
                 Guid scheduleId = new(data.ScheduleId);
 
-                TrainSchedule schedule = await _context.TrainSchedules.Find(s => s.Id == scheduleId).FirstOrDefaultAsync();
+                TrainSchedule schedule = await _context.TrainSchedules
+                    .Find(s => s.Id == scheduleId)
+                    .FirstOrDefaultAsync();
 
                 if (schedule == null) 
                     return CreateErrorResponse(response, "Schedule not found");
@@ -57,17 +64,17 @@ namespace TicketReservationSystemAPI.Services.AdminService
                 DateOnly currentDate = DateOnly.FromDateTime(current);
                 TimeOnly currentTime = TimeOnly.FromDateTime(current);
 
-                // Check if reservation date within 30 days of the booking date
-                if (currentDate.AddDays(30) < schedule.Date) 
-                    return CreateErrorResponse(response, "Reservation can be created only within 30 days of the scheduled date");
-
                 // Check if schedule date has passed
-                if (schedule.Date < currentDate) 
+                if (schedule.Date < currentDate)
                     return CreateErrorResponse(response, "Schedule date has passed");
 
                 // Check if schedule time has passed
-                if (schedule.Date == currentDate && schedule.DepartureTime <= currentTime) 
+                if (schedule.Date == currentDate && schedule.DepartureTime <= currentTime)
                     return CreateErrorResponse(response, "Schedule time has passed");
+
+                // Check if reservation date within 30 days of the booking date
+                if (currentDate.AddDays(30) < schedule.Date) 
+                    return CreateErrorResponse(response, "Reservation can be created only within 30 days of the scheduled date");
 
                 // Check if seat number is valid
                 if (data.Seats < 1 || data.Seats > 4) 
@@ -94,40 +101,39 @@ namespace TicketReservationSystemAPI.Services.AdminService
                     ArrivalTime = schedule.ArrivalTime,
                 };
 
-                await _context.Reservations.InsertOneAsync(reservation);
-
                 // Update available seats
                 schedule.AvailableSeats -= data.Seats;
                 schedule.ReservationIDs.Add(reservation.Id);
 
-                await _context.TrainSchedules.ReplaceOneAsync(s => s.Id == schedule.Id, schedule);
-
                 // Add the reservation to the traveler
                 traveler.ReservationIDs.Add(reservation.Id);
 
+                await _context.Reservations.InsertOneAsync(reservation);
+
+                await _context.TrainSchedules.ReplaceOneAsync(s => s.Id == schedule.Id, schedule);
                 await _context.Travelers.ReplaceOneAsync(t => t.NIC == traveler.NIC, traveler);
+
+                _logger.LogInformation($"Reservation created. Reservation ID: {reservation.Id}");
 
                 response.Data = reservation.Id.ToString();
                 response.Success = true;
                 response.Message = "Reservation created successfully";
-
-                _logger.LogInformation($"Reservation created. Reservation ID: {reservation.Id}");
 
                 return response;
             }
             catch (Exception e)
             {
                 _logger.LogError(e, e.Message);
-                return CreateErrorResponse(response, "Internal server error");
+                return CreateErrorResponse(response, "Error occurred while creating the reservation");
             }
         }
 
         /// <summary>
-        /// Get a reservation
+        /// Get single reservation
         /// </summary>
         /// <param name="id">Reservation ID</param>
         /// <returns>
-        /// Reservation or null
+        /// <see cref="ServiceResponse{T}"/> with reservation or null
         /// </returns>
         public async Task<ServiceResponse<AdminGetReservation>> GetReservation(string id)
         {
@@ -137,7 +143,9 @@ namespace TicketReservationSystemAPI.Services.AdminService
             {
                 Guid reservationId = new(id);
 
-                Reservation reservation = await _context.Reservations.Find(r => r.Id == reservationId).FirstOrDefaultAsync();
+                Reservation reservation = await _context.Reservations
+                    .Find(r => r.Id == reservationId)
+                    .FirstOrDefaultAsync();
 
                 if (reservation == null)
                     return CreateErrorResponse(response, "Reservation not found");
@@ -152,14 +160,9 @@ namespace TicketReservationSystemAPI.Services.AdminService
             catch (Exception e)
             {
                 _logger.LogError(e, e.Message);
-                return CreateErrorResponse(response, "Internal server error");
+                return CreateErrorResponse(response, "Error occurred while retrieving the reservation");
             }
         }
-
-        //public Task<ServiceResponse<List<AdminGetReservation>>> GetReservations(string? userId = null, string? trainId = null, string? date = null)
-        //{
-        //    throw new NotImplementedException();
-        //}
 
         /// <summary>
         /// Update a reservation
@@ -167,7 +170,7 @@ namespace TicketReservationSystemAPI.Services.AdminService
         /// <param name="id">Reservation ID</param>
         /// <param name="data">Update Reservation data</param>
         /// <returns>
-        /// Updated reservation or null
+        /// <see cref="ServiceResponse{T}"/> with updated reservation or null
         /// </returns>
         public async Task<ServiceResponse<AdminGetReservation>> UpdateReservation(string id, AdminUpdateReservation data)
         {
@@ -177,7 +180,9 @@ namespace TicketReservationSystemAPI.Services.AdminService
             {
                 Guid reservationId = new(id);
 
-                Reservation reservation = await _context.Reservations.Find(r => r.Id == reservationId).FirstOrDefaultAsync();
+                Reservation reservation = await _context.Reservations
+                    .Find(r => r.Id == reservationId)
+                    .FirstOrDefaultAsync();
 
                 if (reservation == null)
                     return CreateErrorResponse(response, "Reservation not found");
@@ -207,7 +212,9 @@ namespace TicketReservationSystemAPI.Services.AdminService
 
                 if (data.Seats != reservation.Seats)
                 {
-                    TrainSchedule schedule = await _context.TrainSchedules.Find(s => s.Id == reservation.ScheduleId).FirstOrDefaultAsync();
+                    TrainSchedule schedule = await _context.TrainSchedules
+                        .Find(s => s.Id == reservation.ScheduleId)
+                        .FirstOrDefaultAsync();
 
                     if (data.Seats > reservation.Seats)
                     {
@@ -227,7 +234,6 @@ namespace TicketReservationSystemAPI.Services.AdminService
                     reservation.Seats = data.Seats;
 
                     await _context.Reservations.ReplaceOneAsync(r => r.Id == reservation.Id, reservation);
-
                     await _context.TrainSchedules.ReplaceOneAsync(s => s.Id == schedule.Id, schedule);
                 }
 
@@ -242,7 +248,7 @@ namespace TicketReservationSystemAPI.Services.AdminService
             catch (Exception e)
             {
                 _logger.LogError(e, e.Message);
-                return CreateErrorResponse(response, "Internal server error");
+                return CreateErrorResponse(response, "Error occurred while updating the reservation");
             }
         }
 
@@ -251,7 +257,7 @@ namespace TicketReservationSystemAPI.Services.AdminService
         /// </summary>
         /// <param name="id">Reservation ID</param>
         /// <returns>
-        /// Reservation ID or null
+        /// <see cref="ServiceResponse{T}"/> with cancelled reservation ID or null
         /// </returns>
         public async Task<ServiceResponse<string>> CancelReservation(string id)
         {
@@ -290,8 +296,6 @@ namespace TicketReservationSystemAPI.Services.AdminService
 
                 reservation.IsCancelled = true;
 
-                await _context.Reservations.ReplaceOneAsync(r => r.Id == reservation.Id, reservation);
-
                 TrainSchedule schedule = await _context.TrainSchedules
                     .Find(s => s.Id == reservation.ScheduleId)
                     .FirstOrDefaultAsync();
@@ -300,8 +304,6 @@ namespace TicketReservationSystemAPI.Services.AdminService
                 schedule.AvailableSeats += reservation.Seats;
                 schedule.ReservationIDs.Remove(reservation.Id);
 
-                await _context.TrainSchedules.ReplaceOneAsync(s => s.Id == schedule.Id, schedule);
-
                 // Remove the reservation from the traveler
                 Traveler traveler = await _context.Travelers
                     .Find(t => t.NIC == reservation.TravelerId)
@@ -309,6 +311,8 @@ namespace TicketReservationSystemAPI.Services.AdminService
 
                 traveler.ReservationIDs.Remove(reservation.Id);
 
+                await _context.Reservations.ReplaceOneAsync(r => r.Id == reservation.Id, reservation);
+                await _context.TrainSchedules.ReplaceOneAsync(s => s.Id == schedule.Id, schedule);
                 await _context.Travelers.ReplaceOneAsync(t => t.NIC == traveler.NIC, traveler);
 
                 _logger.LogInformation($"Reservation cancelled. Reservation ID: {reservation.Id}");
@@ -321,7 +325,7 @@ namespace TicketReservationSystemAPI.Services.AdminService
             catch (Exception e)
             {
                 _logger.LogError(e, e.Message);
-                return CreateErrorResponse(response, "Error cancelling the reservation");
+                return CreateErrorResponse(response, "Error occurred while cancelling the reservation");
             }
         }
 
@@ -332,7 +336,7 @@ namespace TicketReservationSystemAPI.Services.AdminService
         /// <param name="response">Response</param>
         /// <param name="message">Error message</param>
         /// <returns>
-        /// Response with error message
+        /// <see cref="ServiceResponse{T}"/> with null and error message
         /// </returns>
         private static ServiceResponse<T> CreateErrorResponse<T>(ServiceResponse<T> response, string message)
         {

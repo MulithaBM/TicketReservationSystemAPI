@@ -1,8 +1,8 @@
 ﻿// File name: UserRole.cs
 // <summary>
-// Description: Enum for system roles
+// Description: Enum for system roles.
 // </summary>
-// <author>MulithaBM</author>
+// <author> MulithaBM </author>
 // <created>11/09/2023</created>
 // <modified>11/10/2023</modified>
 

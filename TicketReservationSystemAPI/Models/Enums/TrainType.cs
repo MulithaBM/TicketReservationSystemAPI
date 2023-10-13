@@ -1,8 +1,8 @@
 ﻿// File name: TrainType.cs
 // <summary>
-// Description: Enum for train types
+// Description: Enum for train types.
 // </summary>
-// <author>MulithaBM</author>
+// <author> MulithaBM </author>
 // <created>09/10/2023</created>
 // <modified>11/10/2023</modified>
 

@@ -2,7 +2,7 @@
 // <summary>
 // Description: Interface of the service class for traveler related operations
 // </summary>
-// <author>MulithaBM</author>
+// <author> MulithaBM </author>
 // <created>23/09/2023</created>
 // <modified>11/10/2023</modified>
 
@@ -17,7 +17,7 @@ namespace TicketReservationSystemAPI.Services.TravelerService
         Task<ServiceResponse<string>> Register(TravelerRegistration traveler);
         Task<ServiceResponse<string>> Login(TravelerLogin traveler);
         Task<ServiceResponse<TravelerReturn>> GetAccount(string userId);
-        Task<ServiceResponse<string>> UpdateAccount(string userId, TravelerUpdate traveler);
+        Task<ServiceResponse<TravelerReturn>> UpdateAccount(string userId, TravelerUpdate traveler);
         Task<ServiceResponse<bool>> DeactivateAccount(string userId);
     }
 }

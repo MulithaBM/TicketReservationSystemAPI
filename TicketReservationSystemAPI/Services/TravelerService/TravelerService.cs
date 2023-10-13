@@ -2,7 +2,7 @@
 // <summary>
 // Description: Service class for traveler related operations
 // </summary>
-// <author>MulithaBM</author>
+// <author> MulithaBM </author>
 // <created>11/10/2023</created>
 // <modified>11/10/2023</modified>
 
@@ -26,7 +26,10 @@ namespace TicketReservationSystemAPI.Services.TravelerService
         private readonly IMapper _mapper;
         private readonly ILogger<TravelerService> _logger;
 
-        public TravelerService(DataContext context, IMapper mapper, ILogger<TravelerService> logger)
+        public TravelerService(
+            DataContext context, 
+            IMapper mapper, 
+            ILogger<TravelerService> logger)
         {
             _context = context;
             _mapper = mapper;
@@ -38,7 +41,7 @@ namespace TicketReservationSystemAPI.Services.TravelerService
         /// </summary>
         /// <param name="data">Login data</param>
         /// <returns>
-        /// JWT authorization token
+        /// <see cref="ServiceResponse{T}"/> with authorization token or null
         /// </returns>
         public async Task<ServiceResponse<string>> Login(TravelerLogin data)
         {
@@ -50,11 +53,8 @@ namespace TicketReservationSystemAPI.Services.TravelerService
                     .Find(x => x.Email.ToLower() == data.Email.ToLower())
                     .FirstOrDefaultAsync();
 
-                if (traveler == null)
-                    return CreateErrorResponse(response, "User not found");
-
-                if (!VerifyPasswordHash(data.Password, traveler.PasswordHash, traveler.PasswordSalt))
-                    return CreateErrorResponse(response, "Incorrect password");
+                if (traveler == null || !VerifyPasswordHash(data.Password, traveler.PasswordHash, traveler.PasswordSalt))
+                    return CreateErrorResponse(response, "Invalid email or password");
 
                 if (!traveler.IsActive)
                     return CreateErrorResponse(response, "User account is deactivated");
@@ -68,7 +68,7 @@ namespace TicketReservationSystemAPI.Services.TravelerService
             catch (Exception e)
             {
                 _logger.LogError(e, e.Message);
-                return CreateErrorResponse(response, "Internal server error");
+                return CreateErrorResponse(response, "Error occurred while logging in");
             }
         }
 
@@ -76,7 +76,9 @@ namespace TicketReservationSystemAPI.Services.TravelerService
         /// Traveler register
         /// </summary>
         /// <param name="data">Register data</param>
-        /// <returns>null</returns>
+        /// <returns>
+        /// <see cref="ServiceResponse{T}"/> with null
+        /// </returns>
         public async Task<ServiceResponse<string>> Register(TravelerRegistration data)
         {
             ServiceResponse<string> response = new();
@@ -114,7 +116,7 @@ namespace TicketReservationSystemAPI.Services.TravelerService
             catch (Exception e)
             {
                 _logger.LogError(e, e.Message);
-                return CreateErrorResponse(response, "Internal server error");
+                return CreateErrorResponse(response, "Error occurred during registration");
             }
         }
 
@@ -123,7 +125,7 @@ namespace TicketReservationSystemAPI.Services.TravelerService
         /// </summary>
         /// <param name="userId">User NIC</param>
         /// <returns>
-        /// Get traveler account with reservations
+        /// <see cref="ServiceResponse{T}"/> with account or null
         /// </returns>
         public async Task<ServiceResponse<TravelerReturn>> GetAccount(string userId)
         {
@@ -164,10 +166,12 @@ namespace TicketReservationSystemAPI.Services.TravelerService
         /// </summary>
         /// <param name="userId">User NIC</param>
         /// <param name="data">Update data</param>
-        /// <returns>null</returns>
-        public async Task<ServiceResponse<string>> UpdateAccount(string userId, TravelerUpdate data)
+        /// <returns>
+        /// <see cref="ServiceResponse{T}"/> with updated account or null
+        /// </returns>
+        public async Task<ServiceResponse<TravelerReturn>> UpdateAccount(string userId, TravelerUpdate data)
         {
-            ServiceResponse<string> response = new();
+            ServiceResponse<TravelerReturn> response = new();
 
             try
             {
@@ -179,12 +183,28 @@ namespace TicketReservationSystemAPI.Services.TravelerService
                 if (!string.IsNullOrEmpty(data.Name)) traveler.Name = data.Name;
                 if (!string.IsNullOrEmpty(data.ContactNo)) traveler.ContactNo = data.ContactNo;
 
+                if (!string.IsNullOrEmpty(data.PreviousPassword) && !string.IsNullOrEmpty(data.Password))
+                {
+                    if (data.PreviousPassword == data.Password)
+                        return CreateErrorResponse(response, "New password cannot be the same as the previous password");
+
+                    if (!VerifyPasswordHash(data.PreviousPassword, traveler.PasswordHash, traveler.PasswordSalt)) ;
+
+                    CreatePasswordHash(data.Password, out byte[] passwordHash, out byte[] passwordSalt);
+
+                    traveler.PasswordHash = passwordHash;
+                    traveler.PasswordSalt = passwordSalt;
+                }
+
                 await _context.Travelers.ReplaceOneAsync(x => x.NIC == userId, traveler);
 
+                TravelerReturn travelerReturn = _mapper.Map<TravelerReturn>(traveler);
+
+                response.Data = travelerReturn;
                 response.Success = true;
                 response.Message = "User updated successfully";
 
-                _logger.LogInformation($"User updated. User ID { traveler.NIC }");
+                _logger.LogInformation($"Traveler updated. Traveler ID { traveler.NIC }");
 
                 return response;
             }
@@ -200,7 +220,7 @@ namespace TicketReservationSystemAPI.Services.TravelerService
         /// </summary>
         /// <param name="userId">User NIC</param>
         /// <returns>
-        /// Boolean status of the account (false)
+        /// <see cref="ServiceResponse{T}"/> with boolean status of account or null
         /// </returns>
         public async Task<ServiceResponse<bool>> DeactivateAccount(string userId)
         {
@@ -235,9 +255,7 @@ namespace TicketReservationSystemAPI.Services.TravelerService
         /// Helper method to check if the user exists using NIC
         /// </summary>
         /// <param name="nic">User NIC</param>
-        /// <returns>
-        /// Boolean status
-        /// </returns>
+        /// <returns>Boolean status</returns>
         private async Task<bool> UserExistsNIC(string nic)
         {
             if (await _context.Travelers.Find(x => x.NIC.ToLower() == nic.ToLower()).AnyAsync())
@@ -252,9 +270,7 @@ namespace TicketReservationSystemAPI.Services.TravelerService
         /// Helper method to check if the user exists using email
         /// </summary>
         /// <param name="email">User email</param>
-        /// <returns>
-        /// Boolean status
-        /// </returns>
+        /// <returns>Boolean status</returns>
         private async Task<bool> UserExistsEmail(string email)
         {
             if (await _context.Travelers.Find(x => x.Email.ToLower() == email.ToLower()).AnyAsync())
@@ -284,9 +300,7 @@ namespace TicketReservationSystemAPI.Services.TravelerService
         /// <param name="password"></param>
         /// <param name="passwordHash"></param>
         /// <param name="passwordSalt"></param>
-        /// <returns>
-        /// Boolean status
-        /// </returns>
+        /// <returns>Boolean status</returns>
         private static bool VerifyPasswordHash(string password, byte[] passwordHash, byte[] passwordSalt)
         {
             using var hmac = new HMACSHA512(passwordSalt);
@@ -298,9 +312,7 @@ namespace TicketReservationSystemAPI.Services.TravelerService
         /// Helper method to create JWT token
         /// </summary>
         /// <param name="traveler"></param>
-        /// <returns>
-        /// JWT token
-        /// </returns>
+        /// <returns>JWT token</returns>
         private string CreateToken(Traveler traveler)
         {
             List<Claim> claims = new()
@@ -332,7 +344,7 @@ namespace TicketReservationSystemAPI.Services.TravelerService
         /// <param name="response">Response</param>
         /// <param name="message">Error message</param>
         /// <returns>
-        /// Response with error message
+        /// <see cref="ServiceResponse{T}"/> with null and error message
         /// </returns>
         private static ServiceResponse<T> CreateErrorResponse<T>(ServiceResponse<T> response, string message)
         {

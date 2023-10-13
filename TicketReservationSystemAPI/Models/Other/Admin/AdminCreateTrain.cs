@@ -1,8 +1,8 @@
 ﻿// File name: AdminCreateTrain.cs
 // <summary>
-// Description: A brief description of the file's purpose.
+// Description: Data transfer model to create train, for admin.
 // </summary>
-// <author>MulithaBM</author>
+// <author> MulithaBM </author>
 // <created>09/10/2023</created>
 // <modified>11/10/2023</modified>
 

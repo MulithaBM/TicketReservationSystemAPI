@@ -1,8 +1,8 @@
 ﻿// File name: ServiceResponse.cs
 // <summary>
-// Description: A brief description of the file's purpose.
+// Description: Custom response class for API.
 // </summary>
-// <author>MulithaBM</author>
+// <author> MulithaBM </author>
 // <created>12/09/2023</created>
 // <modified>11/10/2023</modified>
 

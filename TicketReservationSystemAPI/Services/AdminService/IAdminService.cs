@@ -1,12 +1,11 @@
 ﻿// File name: IAdminService.cs
 // <summary>
-// Description: A brief description of the file's purpose.
+// Description: Interface of the service class for admin related operations.
 // </summary>
-// <author>MulithaBM</author>
+// <author> MulithaBM </author>
 // <created>09/10/2023</created>
 // <modified>11/10/2023</modified>
 
-using TicketReservationSystemAPI.Models;
 using TicketReservationSystemAPI.Models.Other;
 using TicketReservationSystemAPI.Models.Other.Admin;
 

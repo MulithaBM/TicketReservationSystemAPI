@@ -1,8 +1,8 @@
 ﻿// File name: AdminGetTrainSchedule.cs
 // <summary>
-// Description: A brief description of the file's purpose.
+// Description: Data transfer model to get train schedule, for admin.
 // </summary>
-// <author>MulithaBM</author>
+// <author> MulithaBM </author>
 // <created>10/10/2023</created>
 // <modified>11/10/2023</modified>
 

@@ -1,18 +1,27 @@
 ﻿// File name: AdminRegistration.cs
 // <summary>
-// Description: A brief description of the file's purpose.
+// Description: Data transfer model to register, for admin.
 // </summary>
-// <author>MulithaBM</author>
+// <author> MulithaBM </author>
 // <created>09/10/2023</created>
 // <modified>11/10/2023</modified>
+
+using System.ComponentModel.DataAnnotations;
 
 namespace TicketReservationSystemAPI.Models.Other.Admin
 {
     public class AdminRegistration
     {
-        public string Name { get; set; } = string.Empty;
-        public string Email { get; set; } = string.Empty;
-        public string ContactNo { get; set; } = string.Empty;
-        public string Password { get; set; } = string.Empty;
+        [Required]
+        public string Name { get; set; }
+
+        [Required]
+        public string Email { get; set; }
+
+        [Required]
+        public string ContactNo { get; set; }
+
+        [Required]
+        public string Password { get; set; }
     }
 }

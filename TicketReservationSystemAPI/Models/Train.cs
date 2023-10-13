@@ -1,13 +1,11 @@
 ﻿// File name: Train.cs
 // <summary>
-// Description: A brief description of the file's purpose.
+// Description: Model class for trains.
 // </summary>
-// <author>MulithaBM</author>
+// <author> MulithaBM </author>
 // <created>09/10/2023</created>
 // <modified>11/10/2023</modified>
 
-using MongoDB.Bson;
-using MongoDB.Bson.Serialization.Attributes;
 using TicketReservationSystemAPI.Models.Enums;
 
 namespace TicketReservationSystemAPI.Models

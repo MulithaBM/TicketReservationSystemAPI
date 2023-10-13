@@ -1,14 +1,15 @@
 ﻿// File name: AutoMapperProfile.cs
 // <summary>
-// Description: A brief description of the file's purpose.
+// Description: Profile declaration for AutoMapper.
 // </summary>
-// <author>MulithaBM</author>
+// <author> MulithaBM </author>
 // <created>11/10/2023</created>
 // <modified>11/10/2023</modified>
 
 using AutoMapper;
 using TicketReservationSystemAPI.Models;
 using TicketReservationSystemAPI.Models.Other.Admin;
+using TicketReservationSystemAPI.Models.Other.Agent;
 using TicketReservationSystemAPI.Models.Other.Traveler;
 
 namespace TicketReservationSystemAPI
@@ -17,7 +18,7 @@ namespace TicketReservationSystemAPI
     {
         public AutoMapperProfile()
         {
-            // Admin
+            // Back-Office
             CreateMap<Admin, AdminReturn>();
             CreateMap<Traveler, AdminGetTraveler>();
             CreateMap<Train, AdminGetTrain>();
@@ -26,9 +27,15 @@ namespace TicketReservationSystemAPI
             CreateMap<Traveler, AdminGetTravelerWithReservations>();
             CreateMap<Reservation, AdminGetReservation>();
 
+            // Travel agent
+            CreateMap<Agent, AgentReturn>();
+            CreateMap<Train, AgentGetTrain>();
+            CreateMap<TrainSchedule, AgentGetTrainSchedule>();
+            CreateMap<Train, AgentGetTrainWithSchedules>();
+
             // Traveler
-            CreateMap<Reservation, TravelerGetReservation>();
             CreateMap<Traveler, TravelerReturn>();
+            CreateMap<Reservation, TravelerGetReservation>();
             CreateMap<Train, TravelerGetTrain>();
             CreateMap<Train, TravelerGetTrainWithSchedules>();
             CreateMap<TrainSchedule, TravelerGetTrainSchedule>();

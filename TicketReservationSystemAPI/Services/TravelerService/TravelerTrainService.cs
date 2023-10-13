@@ -2,7 +2,7 @@
 // <summary>
 // Description: Service class for traveler's train related operations
 // </summary>
-// <author>MulithaBM</author>
+// <author> MulithaBM </author>
 // <created>12/10/2023</created>
 // <modified>12/10/2023</modified>
 
@@ -21,7 +21,10 @@ namespace TicketReservationSystemAPI.Services.TravelerService
         private readonly IMapper _mapper;
         private readonly ILogger<TravelerTrainService> _logger;
 
-        public TravelerTrainService(DataContext context, IMapper mapper, ILogger<TravelerTrainService> logger)
+        public TravelerTrainService(
+            DataContext context, 
+            IMapper mapper, 
+            ILogger<TravelerTrainService> logger)
         {
             _context = context;
             _mapper = mapper;
@@ -33,7 +36,7 @@ namespace TicketReservationSystemAPI.Services.TravelerService
         /// </summary>
         /// <param name="id">Train ID</param>
         /// <returns>
-        /// Train details with schedules
+        /// <see cref="TravelerGetTrainWithSchedules"/> with train or null
         /// </returns>
         public async Task<ServiceResponse<TravelerGetTrainWithSchedules>> GetTrain(string id)
         {
@@ -83,7 +86,9 @@ namespace TicketReservationSystemAPI.Services.TravelerService
         /// <param name="departureStation">Departure station</param>
         /// <param name="arrivalStation">Arrival station</param>
         /// <param name="date">Date</param>
-        /// <returns>List of matching trains</returns>
+        /// <returns>
+        /// <see cref="List{TravelerGetTrain}"/> with list of trains or null
+        /// </returns>
         public async Task<ServiceResponse<List<TravelerGetTrain>>> GetTrains(string departureStation, string arrivalStation, string date)
         {
             ServiceResponse<List<TravelerGetTrain>> response = new();
@@ -126,7 +131,9 @@ namespace TicketReservationSystemAPI.Services.TravelerService
         /// Get schedule by id
         /// </summary>
         /// <param name="id">Schedule ID</param>
-        /// <returns>Matching schedule</returns>
+        /// <returns>
+        /// <see cref="TravelerGetTrainSchedule"/> with schedule or null
+        /// </returns>
         public async Task<ServiceResponse<TravelerGetTrainSchedule>> GetSchedule(string id)
         {
             ServiceResponse<TravelerGetTrainSchedule> response = new();
@@ -162,7 +169,7 @@ namespace TicketReservationSystemAPI.Services.TravelerService
         /// <param name="response">Response</param>
         /// <param name="message">Error message</param>
         /// <returns>
-        /// Response with error message
+        /// <see cref="ServiceResponse{T}"/> with error response
         /// </returns>
         private static ServiceResponse<T> CreateErrorResponse<T>(ServiceResponse<T> response, string message)
         {

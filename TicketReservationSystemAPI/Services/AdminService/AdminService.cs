@@ -1,8 +1,8 @@
 ﻿// File name: AdminService.cs
 // <summary>
-// Description: A brief description of the file's purpose.
+// Description: Service class for back-office operations.
 // </summary>
-// <author>MulithaBM</author>
+// <author> MulithaBM </author>
 // <created>11/10/2023</created>
 // <modified>11/10/2023</modified>
 
@@ -12,6 +12,7 @@ using MongoDB.Driver;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
+using System.Text.RegularExpressions;
 using TicketReservationSystemAPI.Data;
 using TicketReservationSystemAPI.Models;
 using TicketReservationSystemAPI.Models.enums;
@@ -24,140 +25,196 @@ namespace TicketReservationSystemAPI.Services.AdminService
     {
         private readonly DataContext _context;
         private readonly IMapper _mapper;
+        private readonly ILogger<AdminService> _logger;
 
-        public AdminService(DataContext context, IMapper mapper)
+        public AdminService(
+            DataContext context, 
+            IMapper mapper, 
+            ILogger<AdminService> logger)
         {
             _context = context;
             _mapper = mapper;
+            _logger = logger;
         }
 
+        /// <summary>
+        /// Back-Office login
+        /// </summary>
+        /// <param name="data">Login data</param>
+        /// <returns>
+        /// <see cref="ServiceResponse{T}"/> with token or null
+        /// </returns>
         public async Task<ServiceResponse<string>> Login(AdminLogin data)
         {
             ServiceResponse<string> response = new();
 
-            Admin admin = await _context.Admins.Find(x => x.Email.ToLower() == data.Email.ToLower()).FirstOrDefaultAsync();
+            try
+            {
+                if (!string.IsNullOrWhiteSpace(data.Email) || !string.IsNullOrWhiteSpace(data.Password))
+                    return CreateErrorResponse(response, "Email and password are required");
 
-            if (admin == null)
-            {
-                response.Success = false;
-                response.Message = "Invalid email or password";
-                return response;
-            }
-            else if (!VerifyPasswordHash(data.Password, admin.PasswordHash, admin.PasswordSalt))
-            {
-                response.Success = false;
-                response.Message = "Invalid email or password";
-                return response;
-            }
-            else
-            {
+                Admin admin = await _context.Admins
+                    .Find(x => x.Email.ToLower() == data.Email.ToLower())
+                    .FirstOrDefaultAsync();
+
+                if (admin == null || !VerifyPasswordHash(data.Password, admin.PasswordHash, admin.PasswordSalt))
+                    return CreateErrorResponse(response, "Invalid email or password");
+
                 response.Data = CreateToken(admin);
                 response.Success = true;
                 response.Message = "Login successful";
-            }
 
-            return response;
+                return response;
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, e.Message);
+                return CreateErrorResponse(response, "Error occurred while logging in");
+            }
         }
 
+        /// <summary>
+        /// Back-Office registration
+        /// </summary>
+        /// <param name="data">Registration data</param>
+        /// <returns>
+        /// <see cref="ServiceResponse{T}"/> with null
+        /// </returns>
         public async Task<ServiceResponse<string>> Register(AdminRegistration data)
         {
             ServiceResponse<string> response = new();
 
-            if (await UserExistsEmail(data.Email))
+            try
             {
-                response.Success = false;
-                response.Message = "Account with the Email already exists";
+                if (!IsEmailValid(data.Email))
+                    return CreateErrorResponse(response, "Invalid email");
+
+                if (!IsPasswordValid(data.Password))
+                    return CreateErrorResponse(response, "Invalid password");
+
+                if (await UserExistsEmail(data.Email))
+                    return CreateErrorResponse(response, "Email already exists");
+
+                CreatePasswordHash(data.Password, out byte[] passwordHash, out byte[] passwordSalt);
+
+                Admin admin = new()
+                {
+                    Name = data.Name,
+                    Email = data.Email,
+                    PasswordHash = passwordHash,
+                    PasswordSalt = passwordSalt,
+                    ContactNo = data.ContactNo,
+                };
+
+                await _context.Admins.InsertOneAsync(admin);
+
+                response.Success = true;
+                response.Message = "Account created successfully";
+
                 return response;
             }
-
-            CreatePasswordHash(data.Password, out byte[] passwordHash, out byte[] passwordSalt);
-
-            Admin admin = new()
+            catch (Exception e)
             {
-                Name = data.Name,
-                Email = data.Email,
-                PasswordHash = passwordHash,
-                PasswordSalt = passwordSalt,
-                ContactNo = data.ContactNo,
-            };
-
-            await _context.Admins.InsertOneAsync(admin);
-
-            response.Success = true;
-            response.Message = "Account created successfully";
-
-            return response;
+                _logger.LogError(e, e.Message);
+                return CreateErrorResponse(response, "Error occurred during registration");
+            }
         }
 
+        /// <summary>
+        /// Get back-office account
+        /// </summary>
+        /// <param name="userId">User ID</param>
+        /// <returns>
+        /// <see cref="ServiceResponse{T}"/> with account or null
+        /// </returns>
         public async Task<ServiceResponse<AdminReturn>> GetAccount(string userId)
         {
             ServiceResponse<AdminReturn> response = new();
 
-            Admin admin = await _context.Admins.Find(x => x.Id.ToString() == userId).FirstOrDefaultAsync();
-
-            if (admin == null)
+            try
             {
-                response.Success = false;
-                response.Message = "User not found";
+                Admin admin = await _context.Admins
+                    .Find(x => x.Id.ToString() == userId)
+                    .FirstOrDefaultAsync();
+
+                if (admin == null)
+                    return CreateErrorResponse(response, "User not found");
+
+                AdminReturn adminReturn = _mapper.Map<AdminReturn>(admin);
+
+                response.Data = adminReturn;
+                response.Success = true;
+                response.Message = "Account retrieved successfully";
+
                 return response;
             }
-
-            AdminReturn adminReturn = _mapper.Map<AdminReturn>(admin);
-
-            response.Data = adminReturn;
-            response.Success = true;
-
-            return response;
+            catch (Exception e)
+            {
+                _logger.LogError(e, e.Message);
+                return CreateErrorResponse(response, "Error occurred while retrieving account");
+            }
         }
 
+        /// <summary>
+        /// Update back-office account
+        /// </summary>
+        /// <param name="userId">User ID</param>
+        /// <param name="data">Account update data</param>
+        /// <returns>
+        /// <see cref="ServiceResponse{T}"/> with updated account or null
+        /// </returns>
         public async Task<ServiceResponse<AdminReturn>> UpdateAccount(string userId, AdminUpdate data)
         {
             ServiceResponse<AdminReturn> response = new();
 
-            Admin admin = await _context.Admins.Find(x => x.Id.ToString() == userId).FirstOrDefaultAsync();
-
-            if (admin == null)
+            try
             {
-                response.Success = false;
-                response.Message = "User not found";
-                return response;
-            }
+                Admin admin = await _context.Admins
+                    .Find(x => x.Id.ToString() == userId)
+                    .FirstOrDefaultAsync();
 
-            if (data.Name != null)
-            {
-                admin.Name = data.Name;
-            }
+                if (admin == null)
+                    return CreateErrorResponse(response, "User not found");
 
-            if (data.ContactNo != null)
-            {
-                admin.ContactNo = data.ContactNo;
-            }
+                if (!string.IsNullOrEmpty(data.Name)) admin.Name = data.Name;
+                if (!string.IsNullOrEmpty(data.ContactNo)) admin.ContactNo = data.ContactNo;
 
-            if (data.PreviousPassword != null && data.Password != null)
-            {
-                if (!VerifyPasswordHash(data.PreviousPassword, admin.PasswordHash, admin.PasswordSalt))
+                if (!string.IsNullOrEmpty(data.PreviousPassword) && !string.IsNullOrEmpty(data.Password))
                 {
-                    response.Success = false;
-                    response.Message = "Current password is wrong";
-                    return response;
+                    if (!VerifyPasswordHash(data.PreviousPassword, admin.PasswordHash, admin.PasswordSalt))
+                        return CreateErrorResponse(response, "Invalid previous password");
+
+                    CreatePasswordHash(data.Password, out byte[] passwordHash, out byte[] passwordSalt);
+                    admin.PasswordHash = passwordHash;
+                    admin.PasswordSalt = passwordSalt;
                 }
 
-                CreatePasswordHash(data.Password, out byte[] passwordHash, out byte[] passwordSalt);
-                admin.PasswordHash = passwordHash;
-                admin.PasswordSalt = passwordSalt;
+                await _context.Admins.ReplaceOneAsync(x => x.Id == admin.Id, admin);
+
+                _logger.LogInformation($"Account updated successfully. Account ID: {admin.Id}");
+
+                AdminReturn adminReturn = _mapper.Map<AdminReturn>(admin);
+
+                response.Data = adminReturn;
+                response.Success = true;
+                response.Message = "Account updated successfully";
+
+                return response;
             }
-
-            await _context.Admins.ReplaceOneAsync(x => x.Id == admin.Id, admin);
-
-            AdminReturn adminReturn = _mapper.Map<AdminReturn>(admin);
-
-            response.Data = adminReturn;
-            response.Success = true;
-            response.Message = "Account updated successfully";
-
-            return response;
+            catch (Exception e)
+            {
+                _logger.LogError(e, e.Message);
+                return CreateErrorResponse(response, "Error occurred while updating account");
+            }
         }
 
+        /// <summary>
+        /// Delete back-office account
+        /// </summary>
+        /// <param name="userId">User ID</param>
+        /// <returns>
+        /// <see cref="ServiceResponse{T}"/> with deleted user iD
+        /// </returns>
         public async Task<ServiceResponse<string>> DeleteAccount(string userId)
         {
             ServiceResponse<string> response = new();
@@ -179,6 +236,46 @@ namespace TicketReservationSystemAPI.Services.AdminService
             return response;
         }
 
+        /// <summary>
+        /// Helper method to validate email
+        /// </summary>
+        /// <param name="email">Email</param>
+        /// <returns>Boolean result</returns>
+        private static bool IsEmailValid(string email)
+        {
+            if (string.IsNullOrWhiteSpace(email))
+                return false;
+
+            string emailPattern = @"^\S+@\S+\.\S+$";
+
+            return Regex.IsMatch(email, emailPattern, RegexOptions.IgnoreCase);
+        }
+
+        /// <summary>
+        /// Helper method to validate password
+        /// </summary>
+        /// <param name="password">Password</param>
+        /// <returns>Boolean result</returns>
+        private static bool IsPasswordValid(string password)
+        {
+            if (string.IsNullOrWhiteSpace(password))
+                return false;
+
+            // At least 8 characters
+            // At least one uppercase letter
+            // At least one lowercase letter
+            // At least one digit
+            // At least one special character (e.g., !@#$%^&*)
+            string passwordPattern = @"^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[@#$%^&*!]).{8,}$";
+
+            return Regex.IsMatch(password, passwordPattern);
+        }
+
+        /// <summary>
+        /// Helper method to verify email
+        /// </summary>
+        /// <param name="email">Email</param>
+        /// <returns>Boolean result</returns>
         private async Task<bool> UserExistsEmail(string email)
         {
             if (await _context.Admins.Find(x => x.Email.ToLower() == email.ToLower()).AnyAsync())
@@ -189,6 +286,10 @@ namespace TicketReservationSystemAPI.Services.AdminService
             return false;
         }
 
+        /// <summary>
+        /// Helper method to create password hash
+        /// </summary>
+        /// <param name="password">Password</param>
         private static void CreatePasswordHash(string password, out byte[] passwordHash, out byte[] passwordSalt)
         {
             using var hmac = new HMACSHA512();
@@ -196,6 +297,13 @@ namespace TicketReservationSystemAPI.Services.AdminService
             passwordHash = hmac.ComputeHash(System.Text.Encoding.UTF8.GetBytes(password));
         }
 
+        /// <summary>
+        /// Helper method to verify password hash
+        /// </summary>
+        /// <param name="password">Password</param>
+        /// <param name="passwordHash">Password hash</param>
+        /// <param name="passwordSalt">Password salt</param>
+        /// <returns></returns>
         private static bool VerifyPasswordHash(string password, byte[] passwordHash, byte[] passwordSalt)
         {
             using var hmac = new HMACSHA512(passwordSalt);
@@ -203,6 +311,11 @@ namespace TicketReservationSystemAPI.Services.AdminService
             return computeHash.SequenceEqual(passwordHash);
         }
 
+        /// <summary>
+        /// Helper method to create JWT token
+        /// </summary>
+        /// <param name="admin">Admin object</param>
+        /// <returns>JWT Token</returns>
         private string CreateToken(Admin admin)
         {
             List<Claim> claims = new()
@@ -225,6 +338,22 @@ namespace TicketReservationSystemAPI.Services.AdminService
             JwtSecurityTokenHandler tokenHandler = new();
             SecurityToken token = tokenHandler.CreateToken(tokenDescriptor);
             return tokenHandler.WriteToken(token);
+        }
+
+        /// <summary>
+        /// Helper method to create error response
+        /// </summary>
+        /// <typeparam name="T">Response.Data type</typeparam>
+        /// <param name="response">Response</param>
+        /// <param name="message">Error message</param>
+        /// <returns>
+        /// <see cref="ServiceResponse{T}"/> with null and error message
+        /// </returns>
+        private static ServiceResponse<T> CreateErrorResponse<T>(ServiceResponse<T> response, string message)
+        {
+            response.Success = false;
+            response.Message = message;
+            return response;
         }
     }
 }

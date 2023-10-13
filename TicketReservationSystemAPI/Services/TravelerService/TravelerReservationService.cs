@@ -2,7 +2,7 @@
 // <summary>
 // Description: Service class for traveler's reservation related operations
 // </summary>
-// <author>MulithaBM</author>
+// <author> MulithaBM </author>
 // <created>12/10/2023</created>
 // <modified>12/10/2023</modified>
 
@@ -21,7 +21,9 @@ namespace TicketReservationSystemAPI.Services.TravelerService
         private readonly IMapper _mapper;
         private readonly ILogger<TravelerReservationService> _logger;
 
-        public TravelerReservationService(DataContext context, IMapper mapper,
+        public TravelerReservationService(
+            DataContext context, 
+            IMapper mapper,
             ILogger<TravelerReservationService> logger)
         {
             _context = context;
@@ -29,6 +31,14 @@ namespace TicketReservationSystemAPI.Services.TravelerService
             _logger = logger;
         }
 
+        /// <summary>
+        /// Create a new reservation
+        /// </summary>
+        /// <param name="nic">Traveler NIC</param>
+        /// <param name="data">Create reservation data</param>
+        /// <returns>
+        /// <see cref="ServiceResponse{T}"/> with reservation ID or null
+        /// </returns>
         public async Task<ServiceResponse<string>> CreateReservation(string nic, TravelerCreateReservation data)
         {
             ServiceResponse<string> response = new();
@@ -118,6 +128,14 @@ namespace TicketReservationSystemAPI.Services.TravelerService
             }
         }
 
+        /// <summary>
+        /// Get all the reservations of a traveler
+        /// </summary>
+        /// <param name="nic">Traveler NIC</param>
+        /// <param name="past"></param>
+        /// <returns>
+        /// <see cref="ServiceResponse{T}"/> with list of reservations or null
+        /// </returns>
         public async Task<ServiceResponse<List<TravelerGetReservation>>> GetReservations(string nic, bool past)
         {
             ServiceResponse<List<TravelerGetReservation>> response = new();
@@ -175,6 +193,13 @@ namespace TicketReservationSystemAPI.Services.TravelerService
             }
         }
 
+        /// <summary>
+        /// Get single reservation
+        /// </summary>
+        /// <param name="id">Reservation ID</param>
+        /// <returns>
+        /// <see cref="ServiceResponse{T}"/> with reservation or null
+        /// </returns>
         public async Task<ServiceResponse<TravelerGetReservation>> GetReservation(string id)
         {
             ServiceResponse<TravelerGetReservation> response = new();
@@ -205,6 +230,14 @@ namespace TicketReservationSystemAPI.Services.TravelerService
             }
         }
 
+        /// <summary>
+        /// Update a reservation
+        /// </summary>
+        /// <param name="id">Reservation ID</param>
+        /// <param name="data">Update reservation data</param>
+        /// <returns>
+        /// <see cref="ServiceResponse{T}"/> with updated reservation or null
+        /// </returns>
         public async Task<ServiceResponse<TravelerGetReservation>> UpdateReservation(string id, TravelerUpdateReservation data)
         {
             ServiceResponse<TravelerGetReservation> response = new();
@@ -284,6 +317,13 @@ namespace TicketReservationSystemAPI.Services.TravelerService
             }
         }
 
+        /// <summary>
+        /// Cancel reservation
+        /// </summary>
+        /// <param name="id">Reservation ID</param>
+        /// <returns>
+        /// <see cref="ServiceResponse{T}"/> with cancelled reservation ID or null
+        /// </returns>
         public async Task<ServiceResponse<string>> CancelReservation(string id)
         {
             ServiceResponse<string> response = new();
@@ -356,6 +396,15 @@ namespace TicketReservationSystemAPI.Services.TravelerService
             }
         }
 
+        /// <summary>
+        /// Helper method to create error response
+        /// </summary>
+        /// <typeparam name="T">Response.Data type</typeparam>
+        /// <param name="response">Response</param>
+        /// <param name="message">Error message</param>
+        /// <returns>
+        /// <see cref="ServiceResponse{T}"/> with null and error message
+        /// </returns>
         private static ServiceResponse<T> CreateErrorResponse<T>(ServiceResponse<T> response, string message)
         {
             response.Success = false;

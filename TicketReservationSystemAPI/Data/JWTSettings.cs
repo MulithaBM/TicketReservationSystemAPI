@@ -2,7 +2,7 @@
 // <summary>
 // Description: JWT settings
 // </summary>
-// <author>MulithaBM</author>
+// <author> MulithaBM </author>
 // <created>26/09/2023</created>
 // <modified>11/10/2023</modified>
 

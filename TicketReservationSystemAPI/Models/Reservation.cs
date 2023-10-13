@@ -1,13 +1,10 @@
 ﻿// File name: Reservation.cs
 // <summary>
-// Description: A brief description of the file's purpose.
+// Description: Model class for reservations.
 // </summary>
-// <author>MulithaBM</author>
+// <author> MulithaBM </author>
 // <created>11/09/2023</created>
 // <modified>11/10/2023</modified>
-
-using MongoDB.Bson;
-using MongoDB.Bson.Serialization.Attributes;
 
 namespace TicketReservationSystemAPI.Models
 {

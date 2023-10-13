@@ -2,7 +2,7 @@
 // <summary>
 // Description: Service class for admin train related operations
 // </summary>
-// <author>MulithaBM</author>
+// <author> MulithaBM </author>
 // <created>11/10/2023</created>
 // <modified>11/10/2023</modified>
 
@@ -20,18 +20,25 @@ namespace TicketReservationSystemAPI.Services.AdminService
     {
         private readonly DataContext _context;
         private readonly IMapper _mapper;
+        private readonly ILogger<AdminTrainService> _logger;
 
-        public AdminTrainService(DataContext context, IMapper mapper)
+        public AdminTrainService(
+            DataContext context, 
+            IMapper mapper, 
+            ILogger<AdminTrainService> logger)
         {
             _context = context;
             _mapper = mapper;
+            _logger = logger;
         }
 
         /// <summary>
         /// Create a train
         /// </summary>
-        /// <param name="data"></param>
-        /// <returns></returns>
+        /// <param name="data">Create train data</param>
+        /// <returns>
+        /// <see cref="ServiceResponse{T}"/> with created train ID
+        /// </returns>
         public async Task<ServiceResponse<string>> CreateTrain(AdminCreateTrain data)
         {
             ServiceResponse<string> response = new();
@@ -61,7 +68,9 @@ namespace TicketReservationSystemAPI.Services.AdminService
         /// <param name="publishStatus">Publish status of the train</param>
         /// <param name="departureStation">Departure station</param>
         /// <param name="arrivalStation">Arrival station</param>
-        /// <returns></returns>
+        /// <returns>
+        /// <see cref="ServiceResponse{T}"/> with list of trains
+        /// </returns>
         public async Task<ServiceResponse<List<AdminGetTrain>>> GetTrains(
             bool activeStatus, 
             bool publishStatus, 
@@ -119,7 +128,9 @@ namespace TicketReservationSystemAPI.Services.AdminService
         /// Get a single train with schedules
         /// </summary>
         /// <param name="id">Train ID</param>
-        /// <returns>Train with schedules of type AdminGetTrainWithSchedules</returns>
+        /// <returns>
+        /// <see cref="ServiceResponse{T}"/> with train and schedules
+        /// </returns>
         public async Task<ServiceResponse<AdminGetTrainWithSchedules>> GetTrain(string id)
         {
             ServiceResponse<AdminGetTrainWithSchedules> response = new();
@@ -158,12 +169,17 @@ namespace TicketReservationSystemAPI.Services.AdminService
             return response;
         }
 
-        // TODO : Implement this
-        //public Task<ServiceResponse<string>> UpdateTrain(AdminUpdateTrain data)
-        //{
-        //    throw new NotImplementedException();
-        //}
-
+        /// <summary>
+        /// Update train active status
+        /// </summary>
+        /// <remarks>
+        /// When train becomes inactive, all the active schedules are deleted
+        /// </remarks>
+        /// <param name="id">Train ID</param>
+        /// <param name="status">Status, true (active) / false (inactive)</param>
+        /// <returns>
+        /// <see cref="ServiceResponse{T}"/> with updated active status
+        /// </returns>
         public async Task<ServiceResponse<bool>> UpdateActiveStatus(string id, bool status)
         {
             ServiceResponse<bool> response = new();
@@ -242,7 +258,9 @@ namespace TicketReservationSystemAPI.Services.AdminService
         /// </remarks>
         /// <param name="id">Train ID</param>
         /// <param name="status">Status, true (publish) / false (unpublish)</param>
-        /// <returns></returns>
+        /// <returns>
+        /// <see cref="ServiceResponse{T}"/> with updated publish status
+        /// </returns>
         public async Task<ServiceResponse<bool>> UpdatePublishStatus(string id, bool status)
         {
             ServiceResponse<bool> response = new();
@@ -322,7 +340,9 @@ namespace TicketReservationSystemAPI.Services.AdminService
         /// </remarks>
         /// <param name="id">Train ID</param>
         /// <param name="date">Date of cancellation</param>
-        /// <returns></returns>
+        /// <returns>
+        /// <see cref="ServiceResponse{T}"/> with cancelled train ID
+        /// </returns>
         public async Task<ServiceResponse<string>> CancelTrain(string id, AdminCancelTrain data)
         {
             ServiceResponse<string> response = new();
@@ -381,7 +401,9 @@ namespace TicketReservationSystemAPI.Services.AdminService
         /// Unpublished trains become published automatically when a schedule is added
         /// </remarks>
         /// <param name="data">Schedule data</param>
-        /// <returns>ID of the created schedule</returns>
+        /// <returns>
+        /// <see cref="ServiceResponse{T}"/> with created schedule ID
+        /// </returns>
         public async Task<ServiceResponse<string>> AddSchedule(AdminAddSchedule data)
         {
             ServiceResponse<string> response = new();
@@ -429,7 +451,9 @@ namespace TicketReservationSystemAPI.Services.AdminService
         /// Get a single train schedule using schedule ID
         /// </summary>
         /// <param name="id">schedule ID</param>
-        /// <returns>Train schedule</returns>
+        /// <returns>
+        /// <see cref="ServiceResponse{T}"/> with train schedule
+        /// </returns>
         public async Task<ServiceResponse<AdminGetTrainSchedule>> GetSchedule(string id)
         {
             ServiceResponse<AdminGetTrainSchedule> response = new();
@@ -459,7 +483,9 @@ namespace TicketReservationSystemAPI.Services.AdminService
         /// </remarks>
         /// <param name="id">Schedule ID</param>
         /// <param name="data">Update schedule data</param>
-        /// <returns>Train schedule</returns>
+        /// <returns>
+        /// <see cref="ServiceResponse{T}"/> with updated schedule
+        /// </returns>
         public async Task<ServiceResponse<AdminGetTrainSchedule>> UpdateSchedule(string id, AdminUpdateSchedule data)
         {
             ServiceResponse<AdminGetTrainSchedule> response = new();
@@ -508,7 +534,9 @@ namespace TicketReservationSystemAPI.Services.AdminService
         /// If no active schedules are present, train is unpublished automatically
         /// </remarks>
         /// <param name="id">Train ID</param>
-        /// <returns></returns>
+        /// <returns>
+        /// <see cref="ServiceResponse{T}"/> with deleted schedule ID
+        /// </returns>
         public async Task<ServiceResponse<string>> DeleteSchedule(string id)
         {
             ServiceResponse<string> response = new();
