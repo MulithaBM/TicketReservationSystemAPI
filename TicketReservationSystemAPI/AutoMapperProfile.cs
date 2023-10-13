@@ -20,25 +20,28 @@ namespace TicketReservationSystemAPI
         {
             // Back-Office
             CreateMap<Admin, AdminReturn>();
-            CreateMap<Traveler, AdminGetTraveler>();
             CreateMap<Train, AdminGetTrain>();
             CreateMap<Train, AdminGetTrainWithSchedules>();
             CreateMap<TrainSchedule, AdminGetTrainSchedule>();
+            CreateMap<Traveler, AdminGetTraveler>();
             CreateMap<Traveler, AdminGetTravelerWithReservations>();
             CreateMap<Reservation, AdminGetReservation>();
 
             // Travel agent
             CreateMap<Agent, AgentReturn>();
             CreateMap<Train, AgentGetTrain>();
-            CreateMap<TrainSchedule, AgentGetTrainSchedule>();
             CreateMap<Train, AgentGetTrainWithSchedules>();
+            CreateMap<TrainSchedule, AgentGetTrainSchedule>();
+            CreateMap<Traveler, AgentGetTraveler>();
+            CreateMap<Traveler, AgentGetTravelerWithReservations>();
+            CreateMap<Reservation, AgentGetReservation>();
 
             // Traveler
             CreateMap<Traveler, TravelerReturn>();
-            CreateMap<Reservation, TravelerGetReservation>();
             CreateMap<Train, TravelerGetTrain>();
             CreateMap<Train, TravelerGetTrainWithSchedules>();
             CreateMap<TrainSchedule, TravelerGetTrainSchedule>();
+            CreateMap<Reservation, TravelerGetReservation>();
         }
     }
 }

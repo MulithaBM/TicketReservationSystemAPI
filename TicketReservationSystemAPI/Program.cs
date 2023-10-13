@@ -61,6 +61,9 @@ builder.Services.AddSingleton<IAdminReservationService, AdminReservationService>
 
 // Travel agent services
 builder.Services.AddSingleton<IAgentService, AgentService>();
+builder.Services.AddSingleton<IAgentTravelerService, AgentTravelerService>();
+builder.Services.AddSingleton<IAgentTrainService, AgentTrainService>();
+builder.Services.AddSingleton<IAgentReservationService, AgentReservationService>();
 
 // Traveler services
 builder.Services.AddSingleton<ITravelerService, TravelerService>();
