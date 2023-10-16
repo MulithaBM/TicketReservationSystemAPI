@@ -54,12 +54,11 @@ builder.Services.AddSwaggerGen(
 // CORS configurations
 builder.Services.AddCors(options =>
 {
-    options.AddDefaultPolicy(builder =>
-    {
-        builder.AllowAnyOrigin()
-            .AllowAnyHeader()
-            .AllowAnyMethod();
-    });
+    options.AddDefaultPolicy(
+        policy =>
+        {
+            policy.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod();
+        });
 });
 
 builder.Services.AddAutoMapper(typeof(Program).Assembly);
