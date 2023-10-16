@@ -57,6 +57,7 @@ namespace TicketReservationSystemAPI.Services.AdminService
                 NIC = data.NIC,
                 Name = data.Name,
                 Email = data.Email,
+                ContactNo = data.ContactNo,
                 PasswordHash = passwordHash,
                 PasswordSalt = passwordSalt,
                 IsActive = true,

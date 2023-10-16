@@ -14,7 +14,7 @@ namespace TicketReservationSystemAPI.Services.AdminService
     public interface IAdminTrainService
     {
         Task<ServiceResponse<string>> CreateTrain(AdminCreateTrain data);
-        Task<ServiceResponse<List<AdminGetTrain>>> GetTrains(bool activeStatus, bool publishStatus, string? departureStation, string? arrivalStation);
+        Task<ServiceResponse<List<AdminGetTrain>>> GetTrains(bool activeStatus, bool publishStatus, string? departureStation, string? arrivalStation, string? date);
         Task<ServiceResponse<AdminGetTrainWithSchedules>> GetTrain(string id);
         Task<ServiceResponse<bool>> UpdateActiveStatus(string id, bool status);
         Task<ServiceResponse<bool>> UpdatePublishStatus(string id, bool status);    

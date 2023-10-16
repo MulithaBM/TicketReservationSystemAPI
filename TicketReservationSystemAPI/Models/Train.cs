@@ -18,8 +18,8 @@ namespace TicketReservationSystemAPI.Models
         public int Seats { get; set; }
         public string DepartureStation { get; set; }
         public string ArrivalStation { get; set; }
-        public IList<Guid> ScheduleIDs { get; set; } = new List<Guid>();
-        public IList<DateOnly> AvailableDates { get; set; } = new List<DateOnly>();
+        public List<Guid> ScheduleIDs { get; set; } = new();
+        public HashSet<DateOnly> AvailableDates { get; set; } = new();
         public bool IsActive { get; set; } = true;
         public bool IsPublished { get; set; } = false;
     }

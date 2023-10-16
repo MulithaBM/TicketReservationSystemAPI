@@ -50,11 +50,11 @@ namespace TicketReservationSystemAPI.Services.AdminService
 
             try
             {
-                if (!string.IsNullOrWhiteSpace(data.Email) || !string.IsNullOrWhiteSpace(data.Password))
+                if (string.IsNullOrWhiteSpace(data.Email) || string.IsNullOrWhiteSpace(data.Password))
                     return CreateErrorResponse(response, "Email and password are required");
 
                 Admin admin = await _context.Admins
-                    .Find(x => x.Email.ToLower() == data.Email.ToLower())
+                    .Find(a => a.Email.ToLower() == data.Email.ToLower())
                     .FirstOrDefaultAsync();
 
                 if (admin == null || !VerifyPasswordHash(data.Password, admin.PasswordHash, admin.PasswordSalt))
@@ -63,6 +63,8 @@ namespace TicketReservationSystemAPI.Services.AdminService
                 response.Data = CreateToken(admin);
                 response.Success = true;
                 response.Message = "Login successful";
+
+                _logger.LogInformation($"Admin login. Account email: {admin.Email}");
 
                 return response;
             }
@@ -97,16 +99,26 @@ namespace TicketReservationSystemAPI.Services.AdminService
 
                 CreatePasswordHash(data.Password, out byte[] passwordHash, out byte[] passwordSalt);
 
+                if (string.IsNullOrWhiteSpace(data.Name))
+                    return CreateErrorResponse(response, "Name is required");
+
+                if (string.IsNullOrWhiteSpace(data.ContactNo))
+                    return CreateErrorResponse(response, "Contact number is required");
+                if (data.ContactNo.Length != 10)
+                    return CreateErrorResponse(response, "Invalid contact number");
+
                 Admin admin = new()
                 {
                     Name = data.Name,
                     Email = data.Email,
+                    ContactNo = data.ContactNo,
                     PasswordHash = passwordHash,
                     PasswordSalt = passwordSalt,
-                    ContactNo = data.ContactNo,
                 };
 
                 await _context.Admins.InsertOneAsync(admin);
+
+                _logger.LogInformation($"Admin registration. Account email: {admin.Email}");
 
                 response.Success = true;
                 response.Message = "Account created successfully";
@@ -134,7 +146,7 @@ namespace TicketReservationSystemAPI.Services.AdminService
             try
             {
                 Admin admin = await _context.Admins
-                    .Find(x => x.Id.ToString() == userId)
+                    .Find(a => a.Id.ToString() == userId)
                     .FirstOrDefaultAsync();
 
                 if (admin == null)
@@ -170,16 +182,16 @@ namespace TicketReservationSystemAPI.Services.AdminService
             try
             {
                 Admin admin = await _context.Admins
-                    .Find(x => x.Id.ToString() == userId)
+                    .Find(a => a.Id.ToString() == userId)
                     .FirstOrDefaultAsync();
 
                 if (admin == null)
                     return CreateErrorResponse(response, "User not found");
 
-                if (!string.IsNullOrEmpty(data.Name)) admin.Name = data.Name;
-                if (!string.IsNullOrEmpty(data.ContactNo)) admin.ContactNo = data.ContactNo;
+                if (!string.IsNullOrWhiteSpace(data.Name)) admin.Name = data.Name;
+                if (!string.IsNullOrWhiteSpace(data.ContactNo)) admin.ContactNo = data.ContactNo;
 
-                if (!string.IsNullOrEmpty(data.PreviousPassword) && !string.IsNullOrEmpty(data.Password))
+                if (!string.IsNullOrWhiteSpace(data.PreviousPassword) && !string.IsNullOrWhiteSpace(data.Password))
                 {
                     if (!VerifyPasswordHash(data.PreviousPassword, admin.PasswordHash, admin.PasswordSalt))
                         return CreateErrorResponse(response, "Invalid previous password");
@@ -191,7 +203,7 @@ namespace TicketReservationSystemAPI.Services.AdminService
 
                 await _context.Admins.ReplaceOneAsync(x => x.Id == admin.Id, admin);
 
-                _logger.LogInformation($"Account updated successfully. Account ID: {admin.Id}");
+                _logger.LogInformation($"Account updated successfully. Account email: {admin.Email}");
 
                 AdminReturn adminReturn = _mapper.Map<AdminReturn>(admin);
 
@@ -219,21 +231,25 @@ namespace TicketReservationSystemAPI.Services.AdminService
         {
             ServiceResponse<string> response = new();
 
-            Admin admin = await _context.Admins.Find(x => x.Id.ToString() == userId).FirstOrDefaultAsync();
-
-            if (admin == null)
+            try
             {
-                response.Success = false;
-                response.Message = "User not found";
+                Admin admin = await _context.Admins.Find(x => x.Id.ToString() == userId).FirstOrDefaultAsync();
+
+                if (admin == null)
+                    return CreateErrorResponse(response, "User not found");
+
+                await _context.Admins.DeleteOneAsync(a => a.Id == admin.Id);
+
+                response.Success = true;
+                response.Message = "Account deleted successfully";
+
                 return response;
             }
-
-            await _context.Admins.DeleteOneAsync(x => x.Id == admin.Id);
-
-            response.Success = true;
-            response.Message = "Account deleted successfully";
-
-            return response;
+            catch (Exception e)
+            {
+                _logger.LogError(e, e.Message);
+                return CreateErrorResponse(response, "Error occurred while deleting account");
+            }
         }
 
         /// <summary>
@@ -246,6 +262,7 @@ namespace TicketReservationSystemAPI.Services.AdminService
             if (string.IsNullOrWhiteSpace(email))
                 return false;
 
+            // email must contain @ once, TLD, and no spaces
             string emailPattern = @"^\S+@\S+\.\S+$";
 
             return Regex.IsMatch(email, emailPattern, RegexOptions.IgnoreCase);
@@ -290,6 +307,9 @@ namespace TicketReservationSystemAPI.Services.AdminService
         /// Helper method to create password hash
         /// </summary>
         /// <param name="password">Password</param>
+        /// <returns>
+        /// password hash and password salt of type byte array
+        /// </returns>
         private static void CreatePasswordHash(string password, out byte[] passwordHash, out byte[] passwordSalt)
         {
             using var hmac = new HMACSHA512();

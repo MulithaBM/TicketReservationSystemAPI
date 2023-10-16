@@ -252,9 +252,10 @@ namespace TicketReservationSystemAPI.Controllers
             [FromQuery] bool activeStatus = true,
             [FromQuery] bool publishStatus = true,
             [FromQuery] string? departureStation = null,
-            [FromQuery] string? arrivalStation = null)
+            [FromQuery] string? arrivalStation = null,
+            [FromQuery] string? date = null)
         {
-            ServiceResponse<List<AdminGetTrain>> response = await _adminTrainService.GetTrains(activeStatus, publishStatus, departureStation, arrivalStation);
+            ServiceResponse<List<AdminGetTrain>> response = await _adminTrainService.GetTrains(activeStatus, publishStatus, departureStation, arrivalStation, date);
 
             return response.Success ? Ok(response) : BadRequest(response);
         }

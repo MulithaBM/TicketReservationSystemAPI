@@ -8,6 +8,7 @@
 
 using AutoMapper;
 using MongoDB.Driver;
+using System;
 using TicketReservationSystemAPI.Data;
 using TicketReservationSystemAPI.Models;
 using TicketReservationSystemAPI.Models.Enums;
@@ -43,22 +44,47 @@ namespace TicketReservationSystemAPI.Services.AdminService
         {
             ServiceResponse<string> response = new();
 
-            Train train = new()
+            try
             {
-                Name = data.Name,
-                Type = (TrainType)data.Type,
-                Seats = data.Seats,
-                DepartureStation = data.DepartureStation.ToLower(),
-                ArrivalStation = data.ArrivalStation.ToLower()
-            };
+                if (string.IsNullOrWhiteSpace(data.Name))
+                    return CreateErrorResponse(response, "Name is required");
 
-            await _context.Trains.InsertOneAsync(train);
+                if (data.Type < 0 || data.Type > Enum.GetNames(typeof(TrainType)).Length)
+                    return CreateErrorResponse(response, $"Train type can be from 0 to {Enum.GetNames(typeof(TrainType)).Length}");
+                
+                if (data.Seats <= 0)
+                    return CreateErrorResponse(response, "Seats should be a positive number");
 
-            response.Data = train.Id.ToString();
-            response.Success = true;
-            response.Message = "Train created successfully";
+                if (string.IsNullOrWhiteSpace(data.DepartureStation))
+                    return CreateErrorResponse(response, "Departure station is required");
 
-            return response;
+                if (string.IsNullOrWhiteSpace(data.ArrivalStation))
+                    return CreateErrorResponse(response, "Arrival station is required");
+
+                Train train = new()
+                {
+                    Name = data.Name,
+                    Type = (TrainType)data.Type,
+                    Seats = data.Seats,
+                    DepartureStation = data.DepartureStation.ToLower(),
+                    ArrivalStation = data.ArrivalStation.ToLower()
+                };
+
+                await _context.Trains.InsertOneAsync(train);
+
+                _logger.LogInformation($"Train created successfully. Train ID: {train.Id}");
+
+                response.Data = train.Id.ToString();
+                response.Success = true;
+                response.Message = "Train created successfully";
+
+                return response;
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, e.Message);
+                return CreateErrorResponse(response, "Error occurred while creating the train");
+            }
         }
 
         /// <summary>
@@ -68,6 +94,7 @@ namespace TicketReservationSystemAPI.Services.AdminService
         /// <param name="publishStatus">Publish status of the train</param>
         /// <param name="departureStation">Departure station</param>
         /// <param name="arrivalStation">Arrival station</param>
+        /// <param name="date">Date of the train</param>
         /// <returns>
         /// <see cref="ServiceResponse{T}"/> with list of trains
         /// </returns>
@@ -75,53 +102,69 @@ namespace TicketReservationSystemAPI.Services.AdminService
             bool activeStatus, 
             bool publishStatus, 
             string? departureStation, 
-            string? arrivalStation)
+            string? arrivalStation,
+            string? date)
         {
             ServiceResponse<List<AdminGetTrain>> response = new();
 
-            var filterBuilder = Builders<Train>.Filter;
-            var filter = filterBuilder.Empty;
-
-            if (!activeStatus)
+            try
             {
-                filter &= filterBuilder.Eq(train => train.IsActive, false);
-            }
-            else
-            {
-                filter &= filterBuilder.Eq(train => train.IsActive, true);
+                var filterBuilder = Builders<Train>.Filter;
+                var filter = filterBuilder.Empty;
 
-                if (publishStatus)
+                if (!activeStatus)
                 {
-                    // Active and Published Trains
-                    filter &= filterBuilder.Eq(train => train.IsPublished, true);
+                    filter &= filterBuilder.Eq(train => train.IsActive, false);
                 }
                 else
                 {
-                    // Active and Unpublished Trains
-                    filter &= filterBuilder.Eq(train => train.IsPublished, false);
+                    filter &= filterBuilder.Eq(train => train.IsActive, true);
+
+                    if (publishStatus)
+                    {
+                        // Active and Published Trains
+                        filter &= filterBuilder.Eq(train => train.IsPublished, true);
+                    }
+                    else
+                    {
+                        // Active and Unpublished Trains
+                        filter &= filterBuilder.Eq(train => train.IsPublished, false);
+                    }
                 }
-            }
 
-            // Apply schedule filters if any of them are present.
-            // TODO : Case insensitive search
-            if (!string.IsNullOrEmpty(departureStation))
+                // TODO : Case insensitive search
+                if (!string.IsNullOrWhiteSpace(departureStation))
+                {
+                    filter &= filterBuilder.Eq(train => train.DepartureStation, departureStation.ToLower());
+                }
+
+                if (!string.IsNullOrWhiteSpace(arrivalStation))
+                {
+                    filter &= filterBuilder.Eq(train => train.ArrivalStation, arrivalStation.ToLower());
+                }
+
+                if (!string.IsNullOrWhiteSpace(date))
+                {
+                    DateOnly scheduleDate = DateOnly.Parse(date);
+
+                    filter &= filterBuilder.AnyEq(train => train.AvailableDates, scheduleDate);
+                }
+
+                var filteredTrains = await _context.Trains
+                    .Find(filter)
+                    .ToListAsync();
+
+                response.Data = _mapper.Map<List<AdminGetTrain>>(filteredTrains);
+                response.Success = true;
+                response.Message = "Trains retrieved successfully";
+
+                return response;
+            }
+            catch (Exception e)
             {
-                //departureStation = departureStation.ToLower();
-                filter &= filterBuilder.Eq(train => train.DepartureStation, departureStation.ToLower());
+                _logger.LogError(e, e.Message);
+                return CreateErrorResponse(response, "Error occurred while getting the trains");
             }
-
-            if (!string.IsNullOrEmpty(arrivalStation))
-            {
-                //arrivalStation = arrivalStation.ToLower();
-                filter &= filterBuilder.Eq(train => train.ArrivalStation, arrivalStation.ToLower());
-            }
-
-            var filteredTrains = await _context.Trains.Find(filter).ToListAsync();
-
-            response.Data = _mapper.Map<List<AdminGetTrain>>(filteredTrains);
-            response.Success = true;
-
-            return response;
         }
 
         /// <summary>
@@ -135,38 +178,41 @@ namespace TicketReservationSystemAPI.Services.AdminService
         {
             ServiceResponse<AdminGetTrainWithSchedules> response = new();
 
-            Guid trainId = new(id);
-
-            Train train = await _context.Trains.Find(x => x.Id == trainId).FirstOrDefaultAsync();
-
-            if (train == null)
+            try
             {
-                response.Success = false;
-                response.Message = "Train not found";
+                Guid trainId = new(id);
+
+                Train train = await _context.Trains
+                    .Find(t => t.Id == trainId)
+                    .FirstOrDefaultAsync();
+
+                if (train == null)
+                    return CreateErrorResponse(response, "Train not found");
+
+                AdminGetTrainWithSchedules trainWithSchedules = _mapper.Map<AdminGetTrainWithSchedules>(train);
+
+                DateOnly today = DateOnly.FromDateTime(DateTime.Now);
+
+                List<TrainSchedule> schedules = await _context.TrainSchedules
+                    .Find(t => t.TrainId == trainId && t.Date >= today)
+                    .SortBy(t => t.Date)
+                    .ThenBy(t => t.DepartureTime)
+                    .ToListAsync();
+
+                trainWithSchedules.Schedules = _mapper.Map<List<AdminGetTrainSchedule>>(schedules);
+
+                response.Data = trainWithSchedules;
+                response.Success = true;
+
+                response.Message = (schedules.Count == 0) ? "No active schedules found" : "Train retrieved successfully";
+
                 return response;
             }
-
-            AdminGetTrainWithSchedules trainWithSchedules = _mapper.Map<AdminGetTrainWithSchedules>(train);
-
-            DateOnly today = DateOnly.FromDateTime(DateTime.Now);
-
-            List<TrainSchedule> schedules = await _context.TrainSchedules
-                .Find(x => x.TrainId == trainId && x.Date >= today)
-                .SortBy(x => x.Date)
-                .ThenBy(x => x.DepartureTime)
-                .ToListAsync();
-
-            trainWithSchedules.Schedules = _mapper.Map<List<AdminGetTrainSchedule>>(schedules);
-
-            response.Data = trainWithSchedules;
-            response.Success = true;
-
-            if (schedules.Count == 0)
+            catch (Exception e)
             {
-                response.Message = "No active schedules found";
+                _logger.LogError(e, e.Message);
+                return CreateErrorResponse(response, "Error occurred while getting the train");
             }
-
-            return response;
         }
 
         /// <summary>
@@ -184,70 +230,75 @@ namespace TicketReservationSystemAPI.Services.AdminService
         {
             ServiceResponse<bool> response = new();
 
-            Guid trainId = new(id);
-
-            Train train = await _context.Trains.Find(x => x.Id == trainId).FirstOrDefaultAsync();
-
-            if (train == null)
+            try
             {
-                response.Success = false;
-                response.Message = "Train not found";
-                return response;
-            }
+                Guid trainId = new(id);
 
-            if (!status)
-            {
-                if (train.ScheduleIDs != null)
+                Train train = await _context.Trains
+                    .Find(t => t.Id == trainId)
+                    .FirstOrDefaultAsync();
+
+                if (train == null)
+                    return CreateErrorResponse(response, "Train not found");
+
+                if (!status)
                 {
-                    DateOnly today = DateOnly.FromDateTime(DateTime.Today);
+                    DateTime current = DateTime.Now;
+                    DateOnly currentDay = DateOnly.FromDateTime(current);
+                    TimeOnly currentTime = TimeOnly.FromDateTime(current);
 
-                    List<Guid> schedules = await _context.TrainSchedules
-                        .Find(x => x.TrainId == trainId && x.Date >= today)
-                        .Project(x => x.Id)
+                    List<TrainSchedule> schedules = await _context.TrainSchedules
+                        .Find(s => s.TrainId == trainId && s.Date >= currentDay && s.DepartureTime >= currentTime)
                         .ToListAsync();
 
                     if (schedules.Count > 0)
                     {
-                        // check for reservations in schedules from today onwards
-                        bool schedulesWithReservations = schedules.Any(scheduleId =>
+                        // check for reservations in schedules from current day onwards
+                        foreach (TrainSchedule schedule in schedules)
                         {
-                            TrainSchedule schedule = _context.TrainSchedules.Find(x => x.Id == scheduleId).FirstOrDefault();
-                            return schedule != null && schedule.ReservationIDs != null && schedule.ReservationIDs.Any();
-                        });
+                            if (schedule.ReservationIDs.Any())
+                                return CreateErrorResponse(response, "Cannot deactivate train with active reservations");
+                        }
 
-                        if (schedulesWithReservations)
+                        // from train.availableDates hash set, remove the dates from current day onwards
+                        foreach (DateOnly date in train.AvailableDates)
                         {
-                            response.Success = false;
-                            response.Message = "Cannot deactivate a train with active reservations";
-                            return response;
+                            if (date >= currentDay) train.AvailableDates.Remove(date);
                         }
 
                         // delete schedules
-                        await _context.TrainSchedules.DeleteManyAsync(x => schedules.Contains(x.Id));
+                        await _context.TrainSchedules.DeleteManyAsync(s => schedules.Contains(s));
 
                         // remove schedules IDs from train
-                        foreach (Guid schedule in schedules)
+                        foreach (TrainSchedule schedule in schedules)
                         {
-                            train.ScheduleIDs.Remove(schedule);
+                            train.ScheduleIDs.Remove(schedule.Id);
                         }
                     }
+
+                    train.IsActive = false;
+                    train.IsPublished = false;
+                }
+                else
+                {
+                    train.IsActive = true;
                 }
 
-                train.IsActive = false;
-                train.IsPublished = false;
+                await _context.Trains.ReplaceOneAsync(x => x.Id == trainId, train);
+
+                _logger.LogInformation($"Train {(train.IsActive ? "activated " : "deactivated ")} successfully. Train ID: {train.Id}");
+
+                response.Data = train.IsActive;
+                response.Success = true;
+                response.Message = "Train " + (train.IsActive ? "activated " : "deactivated ") + "successfully";
+
+                return response;
             }
-            else
+            catch (Exception e)
             {
-                train.IsActive = true;
+                _logger.LogError(e, e.Message);
+                return CreateErrorResponse(response, "Error occurred while updating the train status");
             }
-
-            await _context.Trains.ReplaceOneAsync(x => x.Id == trainId, train);
-
-            response.Data = train.IsActive;
-            response.Success = true;
-            response.Message = "Train " + (train.IsActive ? "activated " : "deactivated ") + "successfully";
-
-            return response;
         }
 
         /// <summary>
@@ -265,71 +316,69 @@ namespace TicketReservationSystemAPI.Services.AdminService
         {
             ServiceResponse<bool> response = new();
 
-            Guid trainId = new(id);
-
-            Train train = await _context.Trains.Find(x => x.Id == trainId).FirstOrDefaultAsync();
-
-            if (train == null)
+            try
             {
-                response.Success = false;
-                response.Message = "Train not found";
+                Guid trainId = new(id);
+
+                Train train = await _context.Trains
+                    .Find(t => t.Id == trainId)
+                    .FirstOrDefaultAsync();
+
+                if (train == null)
+                    return CreateErrorResponse(response, "Train not found");
+
+                if (status)
+                {
+                    if (!train.IsActive)
+                        return CreateErrorResponse(response, "Cannot publish inactive train");
+
+                    train.IsPublished = status;
+                }
+                else
+                {
+                    DateTime current = DateTime.Now;
+                    DateOnly currentDay = DateOnly.FromDateTime(current);
+                    TimeOnly currentTime = TimeOnly.FromDateTime(current);
+
+                    List<TrainSchedule> schedules = await _context.TrainSchedules
+                        .Find(s => s.TrainId == trainId && s.Date >= currentDay && s.DepartureTime >= currentTime)
+                        .ToListAsync();
+
+                    if (schedules.Count > 0)
+                    {
+                        foreach (TrainSchedule schedule in schedules)
+                        {
+                            if (schedule.ReservationIDs.Any())
+                                return CreateErrorResponse(response, "Cannot unpublish train with active reservations");
+                        }
+
+                        // Remove all the active schedules
+                        await _context.TrainSchedules.DeleteManyAsync(s => schedules.Contains(s));
+
+                        foreach (TrainSchedule schedule in schedules)
+                        {
+                            train.ScheduleIDs.Remove(schedule.Id);
+                        }
+                    }
+
+                    train.IsPublished = status;
+                }
+
+                await _context.Trains.ReplaceOneAsync(x => x.Id == trainId, train);
+
+                _logger.LogInformation($"Train {(train.IsPublished ? "published " : "unpublished ")} successfully. Train ID: {train.Id}");
+
+                response.Data = train.IsPublished;
+                response.Success = true;
+                response.Message = "Train " + (train.IsPublished ? "published " : "unpublished ") + "successfully";
+
                 return response;
             }
-
-            if (status)
+            catch (Exception e)
             {
-                if (!train.IsActive)
-                {
-                    response.Success = false;
-                    response.Message = "Cannot publish an inactive train";
-                    return response;
-                }
-
-                train.IsPublished = status;
+                _logger.LogError(e, e.Message);
+                return CreateErrorResponse(response, "Error occurred while updating the train publish status");
             }
-            else
-            {
-                DateOnly today = DateOnly.FromDateTime(DateTime.Today);
-
-                List<Guid> schedules = await _context.TrainSchedules
-                    .Find(x => x.TrainId == trainId && x.Date >= today)
-                    .Project(x => x.Id)
-                    .ToListAsync();
-
-                if (schedules.Count > 0)
-                {
-                    bool schedulesWithReservations = schedules.Any(scheduleId =>
-                    {
-                        TrainSchedule schedule = _context.TrainSchedules.Find(x => x.Id == scheduleId).FirstOrDefault();
-                        return schedule != null && schedule.ReservationIDs.Any();
-                    });
-
-                    if (schedulesWithReservations)
-                    {
-                        response.Success = false;
-                        response.Message = "Cannot unpublish train with active reservations";
-                        return response;
-                    }
-
-                    // Remove all the active schedules
-                    await _context.TrainSchedules.DeleteManyAsync(x => schedules.Contains(x.Id));
-
-                    foreach (Guid schedule in schedules)
-                    {
-                        train.ScheduleIDs.Remove(schedule);
-                    }
-                }
-
-                train.IsPublished = status;
-            }
-
-            await _context.Trains.ReplaceOneAsync(x => x.Id == trainId, train);
-
-            response.Data = train.IsPublished;
-            response.Success = true;
-            response.Message = "Train " + (train.IsPublished ? "published " : "unpublished ") + "successfully";
-
-            return response;
         }
 
         /// <summary>
@@ -347,51 +396,60 @@ namespace TicketReservationSystemAPI.Services.AdminService
         {
             ServiceResponse<string> response = new();
 
-            Guid trainId = new(id);
-
-            Train train = await _context.Trains.Find(x => x.Id == trainId).FirstOrDefaultAsync();
-
-            if (train == null)
+            try
             {
-                response.Success = false;
-                response.Message = "Train not found";
-                return response;
-            }
+                Guid trainId = new(id);
 
-            DateOnly scheduleDate = DateOnly.Parse(data.Date);
+                Train train = await _context.Trains
+                    .Find(t => t.Id == trainId)
+                    .FirstOrDefaultAsync();
 
-            List<Guid> schedules = await _context.TrainSchedules
-                .Find(x => x.TrainId == trainId && x.Date == scheduleDate)
-                .Project(x => x.Id)
-                .ToListAsync();
-
-            if (schedules.Count > 0)
-            {
-                bool schedulesWithReservations = schedules.Any(scheduleId =>
-                {
-                    TrainSchedule schedule = _context.TrainSchedules.Find(x => x.Id == scheduleId).FirstOrDefault();
-                    return schedule != null && schedule.ReservationIDs.Any();
-                });
-
-                if (schedulesWithReservations)
+                if (train == null)
                 {
                     response.Success = false;
-                    response.Message = "Cannot cancel train with active reservations";
+                    response.Message = "Train not found";
                     return response;
                 }
 
-                await _context.TrainSchedules.DeleteManyAsync(x => schedules.Contains(x.Id));
+                DateOnly scheduleDate = DateOnly.Parse(data.Date);
 
-                foreach (Guid schedule in schedules)
+                List<TrainSchedule> schedules = await _context.TrainSchedules
+                    .Find(x => x.TrainId == trainId && x.Date == scheduleDate)
+                    .ToListAsync();
+
+                if (schedules.Count > 0)
                 {
-                    train.ScheduleIDs.Remove(schedule);
+                    foreach (TrainSchedule schedule in schedules)
+                    {
+                        if (schedule.ReservationIDs.Any())
+                            return CreateErrorResponse(response, "Cannot cancel train with active reservations");
+                    }
+
+                    await _context.TrainSchedules.DeleteManyAsync(t => schedules.Contains(t));
+
+                    foreach (TrainSchedule schedule in schedules)
+                    {
+                        train.ScheduleIDs.Remove(schedule.Id);
+                    }
+
+                    train.AvailableDates.Remove(scheduleDate);
+
+                    await _context.Trains.ReplaceOneAsync(x => x.Id == trainId, train);
                 }
+
+                _logger.LogInformation($"Train cancelled successfully. Train ID: {train.Id}");
+
+                response.Data = train.Id.ToString();
+                response.Success = true;
+                response.Message = "Train cancelled successfully";
+
+                return response;
             }
-
-            response.Success = true;
-            response.Message = "Train cancelled successfully";
-
-            return response;
+            catch (Exception e)
+            {
+                _logger.LogError(e, e.Message);
+                return CreateErrorResponse(response, "Error occurred while cancelling the train");
+            }
         }
 
         /// <summary>
@@ -408,43 +466,60 @@ namespace TicketReservationSystemAPI.Services.AdminService
         {
             ServiceResponse<string> response = new();
 
-            Guid trainId = new(data.TrainId);
-
-            Train train = await _context.Trains.Find(x => x.Id == trainId).FirstOrDefaultAsync();
-
-            if (train == null)
+            try
             {
-                response.Success = false;
-                response.Message = "Train not found";
+                Guid trainId = new(data.TrainId);
+
+                Train train = await _context.Trains
+                    .Find(t => t.Id == trainId)
+                    .FirstOrDefaultAsync();
+
+                if (train == null)
+                    return CreateErrorResponse(response, "Train not found");
+
+                if (string.IsNullOrWhiteSpace(data.Date)) 
+                    return CreateErrorResponse(response, "Date is required");
+
+                if (string.IsNullOrWhiteSpace(data.DepartureTime))
+                    return CreateErrorResponse(response, "Departure time is required");
+
+                if (string.IsNullOrWhiteSpace(data.ArrivalTime))
+                    return CreateErrorResponse(response, "Arrival time is required");
+
+                if (decimal.Parse(data.Price) <= 0)
+                    return CreateErrorResponse(response, "Price should be a positive value");
+                    
+                TrainSchedule schedule = new()
+                {
+                    TrainId = trainId,
+                    Date = DateOnly.Parse(data.Date),
+                    DepartureTime = TimeOnly.Parse(data.DepartureTime),
+                    ArrivalTime = TimeOnly.Parse(data.ArrivalTime),
+                    AvailableSeats = train.Seats,
+                    Price = decimal.Parse(data.Price)
+                };
+
+                train.ScheduleIDs.Add(schedule.Id);
+                train.AvailableDates.Add(schedule.Date);
+
+                if (!train.IsPublished) train.IsPublished = true;
+
+                await _context.TrainSchedules.InsertOneAsync(schedule);
+                await _context.Trains.ReplaceOneAsync(t => t.Id == trainId, train);
+
+                _logger.LogInformation($"Schedule added successfully. Schedule ID: {schedule.Id}");
+
+                response.Data = schedule.Id.ToString();
+                response.Success = true;
+                response.Message = "Schedule added successfully";
+
                 return response;
             }
-
-            TrainSchedule schedule = new()
+            catch (Exception e)
             {
-                TrainId = trainId,
-                Date = DateOnly.Parse(data.Date),
-                DepartureTime = TimeOnly.Parse(data.DepartureTime),
-                ArrivalTime = TimeOnly.Parse(data.ArrivalTime),
-                AvailableSeats = train.Seats,
-                Price = decimal.Parse(data.Price)
-            };
-
-            await _context.TrainSchedules.InsertOneAsync(schedule);
-
-            train.ScheduleIDs.Add(schedule.Id);
-
-            if (!train.IsPublished)
-            {
-                train.IsPublished = true;
+                _logger.LogError(e, e.Message);
+                return CreateErrorResponse(response, "Error occurred while creating the schedule");
             }
-
-            await _context.Trains.ReplaceOneAsync(x => x.Id == trainId, train);
-
-            response.Data = schedule.Id.ToString();
-            response.Success = true;
-            response.Message = "Schedule added successfully";
-
-            return response;
         }
 
         /// <summary>
@@ -458,21 +533,28 @@ namespace TicketReservationSystemAPI.Services.AdminService
         {
             ServiceResponse<AdminGetTrainSchedule> response = new();
 
-            Guid scheduleId = new(id);
-
-            TrainSchedule schedule = await _context.TrainSchedules.Find(x => x.Id == scheduleId).FirstOrDefaultAsync();
-
-            if (schedule == null)
+            try
             {
-                response.Success = false;
-                response.Message = "Schedule not found";
+                Guid scheduleId = new(id);
+
+                TrainSchedule schedule = await _context.TrainSchedules
+                    .Find(t => t.Id == scheduleId)
+                    .FirstOrDefaultAsync();
+
+                if (schedule == null)
+                    return CreateErrorResponse(response, "Schedule not found");
+
+                response.Data = _mapper.Map<AdminGetTrainSchedule>(schedule);
+                response.Success = true;
+                response.Message = "Schedule retrieved successfully";
+
                 return response;
             }
-
-            response.Data = _mapper.Map<AdminGetTrainSchedule>(schedule);
-            response.Success = true;
-
-            return response;
+            catch (Exception e)
+            {
+                _logger.LogError(e, e.Message);
+                return CreateErrorResponse(response, "Error occurred while getting the schedule");
+            }
         }
 
         /// <summary>
@@ -490,40 +572,53 @@ namespace TicketReservationSystemAPI.Services.AdminService
         {
             ServiceResponse<AdminGetTrainSchedule> response = new();
 
-            Guid scheduleId = new(id);
-
-            TrainSchedule schedule = await _context.TrainSchedules.Find(x => x.Id == scheduleId).FirstOrDefaultAsync();
-
-            if (schedule == null)
+            try
             {
-                response.Success = false;
-                response.Message = "Schedule not found";
+                Guid scheduleId = new(id);
+
+                TrainSchedule schedule =
+                    await _context.TrainSchedules
+                        .Find(t => t.Id == scheduleId)
+                        .FirstOrDefaultAsync();
+
+                if (schedule == null)
+                    return CreateErrorResponse(response, "Schedule not found");
+
+                // check if the schedule has reservations
+                if (schedule.ReservationIDs.Any())
+                    return CreateErrorResponse(response, "Cannot update schedule with active reservations");
+
+                if (data.AvailableSeats < 0)
+                    return CreateErrorResponse(response, "Available seats should be a positive value");
+
+                Train train = await _context.Trains.Find(x => x.Id == schedule.TrainId).FirstOrDefaultAsync();
+
+                if (data.AvailableSeats > train.Seats)
+                    return CreateErrorResponse(response, $"Train has only {train.Seats} seats");
+
+                if (data.Price != null && decimal.Parse(data.Price) <= 0)
+                    return CreateErrorResponse(response, "Price should be a positive value");
+
+                schedule.DepartureTime = data.DepartureTime != null ? TimeOnly.Parse(data.DepartureTime) : schedule.DepartureTime;
+                schedule.ArrivalTime = data.ArrivalTime != null ? TimeOnly.Parse(data.ArrivalTime) : schedule.ArrivalTime;
+                schedule.AvailableSeats = data.AvailableSeats ?? schedule.AvailableSeats;
+                schedule.Price = data.Price != null ? decimal.Parse(data.Price) : schedule.Price;
+
+                await _context.TrainSchedules.ReplaceOneAsync(x => x.Id == scheduleId, schedule);
+
+                _logger.LogInformation($"Schedule updated successfully. Schedule ID: {schedule.Id}");
+
+                response.Data = _mapper.Map<AdminGetTrainSchedule>(schedule);
+                response.Success = true;
+                response.Message = "Schedule updated successfully";
+
                 return response;
             }
-
-            // check if the schedule has reservations
-            if (schedule.ReservationIDs != null && schedule.ReservationIDs.Any())
+            catch (Exception e)
             {
-                response.Success = false;
-                response.Message = "Cannot update schedule with active reservations";
-                return response;
+                _logger.LogError(e, e.Message);
+                return CreateErrorResponse(response, "Error occurred while updating the schedule");
             }
-
-            TimeOnly departureTime = (data.DepartureTime != null) ? TimeOnly.Parse(data.DepartureTime) : schedule.DepartureTime;
-            TimeOnly arrivalTime = (data.ArrivalTime != null) ? TimeOnly.Parse(data.ArrivalTime) : schedule.ArrivalTime;
-
-            if (data.DepartureTime != null) schedule.DepartureTime = TimeOnly.Parse(data.DepartureTime);
-            if (data.ArrivalTime != null) schedule.ArrivalTime = TimeOnly.Parse(data.ArrivalTime);
-            if (data.AvailableSeats != null) schedule.AvailableSeats = (int)data.AvailableSeats;
-            if (data.Price != null) schedule.Price = decimal.Parse(data.Price);
-
-            await _context.TrainSchedules.ReplaceOneAsync(x => x.Id == scheduleId, schedule);
-
-            response.Data = _mapper.Map<AdminGetTrainSchedule>(schedule);
-            response.Success = true;
-            response.Message = "Schedule updated successfully";
-
-            return response;
         }
 
         /// <summary>
@@ -541,52 +636,68 @@ namespace TicketReservationSystemAPI.Services.AdminService
         {
             ServiceResponse<string> response = new();
 
-            Guid scheduleId = Guid.Parse(id);
-
-            TrainSchedule schedule = await _context.TrainSchedules.Find(x => x.Id == scheduleId).FirstOrDefaultAsync();
-
-            if (schedule == null)
+            try
             {
-                response.Success = false;
-                response.Message = "Schedule not found";
-                return response;
-            }
+                Guid scheduleId = Guid.Parse(id);
 
-            // check if the schedule has reservations
-            if (schedule.ReservationIDs.Any())
-            {
-                response.Success = false;
-                response.Message = "Cannot delete schedule with active reservations";
-                return response;
-            }
+                TrainSchedule schedule =
+                    await _context.TrainSchedules
+                        .Find(t => t.Id == scheduleId)
+                        .FirstOrDefaultAsync();
 
-            await _context.TrainSchedules.DeleteOneAsync(x => x.Id == scheduleId);
-
-            Train train = await _context.Trains.Find(x => x.Id == schedule.TrainId).FirstOrDefaultAsync();
-
-            if (train != null)
-            {
-                train.ScheduleIDs.Remove(scheduleId);
+                if (schedule == null)
+                    return CreateErrorResponse(response, "Schedule not found");
 
                 DateTime current = DateTime.Now;
                 DateOnly currentDate = DateOnly.FromDateTime(current);
                 TimeOnly currentTime = TimeOnly.FromDateTime(current);
 
-                List<TrainSchedule> activeSchedules = await _context.TrainSchedules
+                // check if the schedule is in the past
+                if (schedule.Date < currentDate || (schedule.Date == currentDate && schedule.DepartureTime < currentTime))
+                    return CreateErrorResponse(response, "Cannot delete a passed schedule");
+
+                // check if the schedule has reservations
+                if (schedule.ReservationIDs.Any())
+                    return CreateErrorResponse(response, "Cannot delete schedule with active reservations");
+
+                Train train = await _context.Trains.Find(x => x.Id == schedule.TrainId).FirstOrDefaultAsync();
+
+                if (train == null)
+                    return CreateErrorResponse(response, "Train not found");
+
+                train.ScheduleIDs.Remove(scheduleId);
+
+                List<TrainSchedule> schedules = await _context.TrainSchedules
                     .Find(s => s.TrainId == train.Id && s.Date >= currentDate && s.DepartureTime >= currentTime)
                     .ToListAsync();
 
-                if (activeSchedules.Count == 0)
+                if (schedules.Count == 0)
                 {
                     train.IsPublished = false;
                 }
+                else
+                {
+                    List<TrainSchedule> schedulesForDeletedDate = schedules
+                        .Where(s => s.Date == schedule.Date)
+                        .ToList();
 
+                    if (schedulesForDeletedDate.Count == 0) train.AvailableDates.Remove(schedule.Date);
+                }
+
+                await _context.TrainSchedules.DeleteOneAsync(x => x.Id == scheduleId);
                 await _context.Trains.ReplaceOneAsync(x => x.Id == train.Id, train);
-            }
 
-            response.Success = true;
-            response.Message = "Schedule deleted successfully";
-            return response;
+                _logger.LogInformation($"Schedule deleted successfully. Schedule ID: {schedule.Id}");
+
+                response.Success = true;
+                response.Message = "Schedule deleted successfully";
+                return response;
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, e.Message);
+                return CreateErrorResponse(response, "Error occurred while deleting the schedule");
+            }
         }
 
         //private async Task<bool> HasActiveReservations(Guid trainId, List<TrainSchedule> schedules)
@@ -622,5 +733,21 @@ namespace TicketReservationSystemAPI.Services.AdminService
 
         //    return false;
         //}
+
+        /// <summary>
+        /// Helper method to create error response
+        /// </summary>
+        /// <typeparam name="T">Response.Data type</typeparam>
+        /// <param name="response">Response</param>
+        /// <param name="message">Error message</param>
+        /// <returns>
+        /// <see cref="ServiceResponse{T}"/> with null and error message
+        /// </returns>
+        private static ServiceResponse<T> CreateErrorResponse<T>(ServiceResponse<T> response, string message)
+        {
+            response.Success = false;
+            response.Message = message;
+            return response;
+        }
     }
 }
