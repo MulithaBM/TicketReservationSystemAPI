@@ -44,31 +44,54 @@ namespace TicketReservationSystemAPI.Services.AdminService
         {
             ServiceResponse<string> response = new();
 
-            if (await UserExistsNIC(data.NIC))
-                return CreateErrorResponse(response, "Account with this NIC already exists");
-
-            if (await UserExistsEmail(data.Email))
-                return CreateErrorResponse(response, "Account with this email already exists");
-
-            CreatePasswordHash(data.Password, out byte[] passwordHash, out byte[] passwordSalt);
-
-            Traveler traveler = new()
+            try
             {
-                NIC = data.NIC,
-                Name = data.Name,
-                Email = data.Email,
-                ContactNo = data.ContactNo,
-                PasswordHash = passwordHash,
-                PasswordSalt = passwordSalt,
-                IsActive = true,
-            };
+                if (await UserExistsNIC(data.NIC))
+                    return CreateErrorResponse(response, "Account with this NIC already exists");
 
-            await _context.Travelers.InsertOneAsync(traveler);
+                if (!IsEmailValid(data.Email))
+                    return CreateErrorResponse(response, "Invalid email address");
+                if (await UserExistsEmail(data.Email))
+                    return CreateErrorResponse(response, "Account with this email already exists");
 
-            response.Success = true;
-            response.Message = "Registration successful";
+                if (string.IsNullOrWhiteSpace(data.Name))
+                    return CreateErrorResponse(response, "Name is required");
 
-            return response;
+                if (string.IsNullOrWhiteSpace(data.ContactNo))
+                    return CreateErrorResponse(response, "Contact number is required");
+                if (data.ContactNo.Length != 10)
+                    return CreateErrorResponse(response, "Invalid contact number");
+                
+                if (!IsPasswordValid(data.Password))
+                    return CreateErrorResponse(response, "Invalid password");
+
+                CreatePasswordHash(data.Password, out byte[] passwordHash, out byte[] passwordSalt);
+
+                Traveler traveler = new()
+                {
+                    NIC = data.NIC,
+                    Name = data.Name,
+                    Email = data.Email,
+                    ContactNo = data.ContactNo,
+                    PasswordHash = passwordHash,
+                    PasswordSalt = passwordSalt,
+                    IsActive = true,
+                };
+
+                await _context.Travelers.InsertOneAsync(traveler);
+
+                _logger.LogInformation($"Traveler account created. Traveler email: {traveler.Email}");
+
+                response.Success = true;
+                response.Message = "Registration successful";
+
+                return response;
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, e.Message);
+                return CreateErrorResponse(response, "Error occurred while creating traveler account");
+            }
         }
 
         /// <summary>
@@ -86,11 +109,15 @@ namespace TicketReservationSystemAPI.Services.AdminService
 
             if (status == null)
             {
-                travelers = await _context.Travelers.Find(x => true).ToListAsync();
+                travelers = await _context.Travelers
+                    .Find(t => true)
+                    .ToListAsync();
             }
             else
             {
-                travelers = await _context.Travelers.Find(x => x.IsActive == status).ToListAsync();
+                travelers = await _context.Travelers
+                    .Find(t => t.IsActive == status)
+                    .ToListAsync();
             }
 
             if (travelers.Count == 0)
@@ -118,37 +145,51 @@ namespace TicketReservationSystemAPI.Services.AdminService
         {
             ServiceResponse<AdminGetTravelerWithReservations> response = new();
 
-            Traveler traveler = await _context.Travelers.Find(x => x.NIC.ToLower() == nic.ToLower()).FirstOrDefaultAsync();
+            try
+            {
+                Traveler traveler = await _context.Travelers
+                    .Find(x => x.NIC.ToLower() == nic.ToLower())
+                    .FirstOrDefaultAsync();
 
-            if (traveler == null)
-                return CreateErrorResponse(response, "Account not found");
+                if (traveler == null)
+                    return CreateErrorResponse(response, "Account not found");
 
-            AdminGetTravelerWithReservations travelerWithReservations = _mapper.Map<AdminGetTravelerWithReservations>(traveler);
+                AdminGetTravelerWithReservations travelerWithReservations =
+                    _mapper.Map<AdminGetTravelerWithReservations>(traveler);
 
-            DateTime current = DateTime.Now;
-            DateOnly currentDate = DateOnly.FromDateTime(current);
-            TimeOnly currentTime = TimeOnly.FromDateTime(current);
+                DateTime current = DateTime.Now;
+                DateOnly currentDate = DateOnly.FromDateTime(current);
+                TimeOnly currentTime = TimeOnly.FromDateTime(current);
 
-            var filterBuilder = Builders<Reservation>.Filter;
-            var filter = filterBuilder.Empty;
+                var filterBuilder = Builders<Reservation>.Filter;
+                var filter = filterBuilder.Empty;
 
-            filter &= filterBuilder.Eq(reservation => reservation.TravelerId, nic);
-            filter &= filterBuilder.Eq(reservation => reservation.IsCancelled, false);
-            filter &= filterBuilder.Gte(reservation => reservation.ReservationDate, currentDate);
-            filter &= filterBuilder.Gte(reservation => reservation.DepartureTime, currentTime);
+                filter &= filterBuilder.Eq(reservation => reservation.TravelerId, nic);
+                filter &= filterBuilder.Eq(reservation => reservation.IsCancelled, false);
+                filter &= filterBuilder.Gte(reservation => reservation.ReservationDate, currentDate);
+                filter &= filterBuilder.Gte(reservation => reservation.DepartureTime, currentTime);
 
-            List<Reservation> reservations = await _context.Reservations
-                .Find(filter)
-                .SortBy(r => r.ReservationDate)
-                .ThenBy(r => r.DepartureTime)
-                .ToListAsync();
+                List<Reservation> reservations = await _context.Reservations
+                    .Find(filter)
+                    .SortBy(r => r.ReservationDate)
+                    .ThenBy(r => r.DepartureTime)
+                    .ToListAsync();
 
-            List<AdminGetReservation> adminGetReservations = _mapper.Map<List<AdminGetReservation>>(reservations);
+                List<AdminGetReservation> adminGetReservations = _mapper.Map<List<AdminGetReservation>>(reservations);
 
-            response.Data = travelerWithReservations;
-            response.Success = true;
+                travelerWithReservations.Reservations = adminGetReservations;
 
-            return response;
+                response.Data = travelerWithReservations;
+                response.Success = true;
+                response.Message = "Account retrieved successfully";
+
+                return response;
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, e.Message);
+                return CreateErrorResponse(response, "Error occurred while getting traveler account");
+            }
         }
 
         /// <summary>

@@ -51,6 +51,17 @@ builder.Services.AddSwaggerGen(
     }
 );
 
+// CORS configurations
+builder.Services.AddCors(options =>
+{
+    options.AddDefaultPolicy(builder =>
+    {
+        builder.AllowAnyOrigin()
+            .AllowAnyHeader()
+            .AllowAnyMethod();
+    });
+});
+
 builder.Services.AddAutoMapper(typeof(Program).Assembly);
 
 // Back-Office services

@@ -90,12 +90,11 @@ namespace TicketReservationSystemAPI.Services.AdminService
             {
                 if (!IsEmailValid(data.Email))
                     return CreateErrorResponse(response, "Invalid email");
+                if (await UserExistsEmail(data.Email))
+                    return CreateErrorResponse(response, "Email already exists");
 
                 if (!IsPasswordValid(data.Password))
                     return CreateErrorResponse(response, "Invalid password");
-
-                if (await UserExistsEmail(data.Email))
-                    return CreateErrorResponse(response, "Email already exists");
 
                 CreatePasswordHash(data.Password, out byte[] passwordHash, out byte[] passwordSalt);
 
